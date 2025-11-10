@@ -14,8 +14,8 @@ class CalculatorResult(ABC):
     def __init__(self):
         self._data = None
 
-    @abstractmethod
     @classmethod
+    @abstractmethod
     def from_calculator(cls, calculator: 'Calculator') -> 'CalculatorResult': pass
 
     @property

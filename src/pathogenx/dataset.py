@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Literal, Generator
+from typing import Literal
 from re import compile as regex
 from warnings import warn
 
@@ -9,7 +9,7 @@ from scipy.sparse.csgraph import connected_components
 
 from pathogenx import PathogenxWarning
 from pathogenx.utils import grouper
-from pathogenx.io import TextFile, PathogenwatchFile, DistFile
+from pathogenx.io import GenotypeFile, MetaFile, DistFile
 
 
 # Classes --------------------------------------------------------------------------------------------------------------
@@ -64,7 +64,7 @@ class Dataset:
         return self._data.itertuples()
 
     @classmethod
-    def from_files(cls, genotypes: TextFile, metadata: TextFile = None, distances: DistFile = None, name: str = None):
+    def from_files(cls, genotypes: GenotypeFile, metadata: MetaFile = None, distances: DistFile = None, name: str = None):
         return cls(
             genotypes.load(),
             metadata.load() if metadata else None,
@@ -73,7 +73,7 @@ class Dataset:
         )
 
     @classmethod
-    def from_pathogenwatch(cls, path: Path) -> Dataset:
+    def from_pathogenwatch(cls, path: Path) -> 'Dataset':
         r = regex(r'.*pathogenwatch-(?P<species>\w+)-(?P<collection>[\w-]+)-'
                   r'(?P<analysis>(kleborate|difference-matrix|metadata))\.csv')
         if not (files := [match for file in path.glob('*.csv') if (match := r.match(file.name))]):
@@ -87,9 +87,9 @@ class Dataset:
             raise DatasetError(f'Could not find any genotypes in {path} for {dataset}')
 
         return cls.from_files(
-            TextFile(genotypes),
-            TextFile(metadata) if metadata else None,
-            PathogenwatchFile(distances) if distances else None,
+            GenotypeFile.from_flavour(genotypes, 'pw-kleborate'),
+            MetaFile.from_flavour(metadata, 'pw-metadata') if metadata else None,
+            DistFile.from_flavour(distances, 'pw-dist') if distances else None,
             dataset
         )
 
