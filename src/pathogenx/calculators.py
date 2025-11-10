@@ -1,32 +1,28 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional, Literal
+from typing import List, Optional
 
 import pandas as pd
 import numpy as np
 from scipy.stats import norm
 
-from pathogenx.io import Dataset
-from pathogenx.models import ModelResults
+from pathogenx.dataset import Dataset
+# from .models import ModelResult
 
 
 # Classes --------------------------------------------------------------------------------------------------------------
 class CalculatorResult(ABC):
     def __init__(self):
-        self._data: pd.DataFrame = None
+        self._data = None
 
-    @classmethod
     @abstractmethod
+    @classmethod
     def from_calculator(cls, calculator: 'Calculator') -> 'CalculatorResult': pass
 
-    @abstractmethod
     @property
-    def data(self) -> pd.DataFrame:
-        return self._data.copy()
-
     @abstractmethod
-    @data.setter
-    def data(self, value: pd.DataFrame):
-        self._data = value
+    def data(self) -> pd.DataFrame:
+        """The resulting data from a calculation."""
+        pass
 
 
 class PrevalenceResult(CalculatorResult):
@@ -41,10 +37,19 @@ class PrevalenceResult(CalculatorResult):
     @classmethod
     def from_calculator(cls, calculator: 'PrevalenceCalculator') -> 'PrevalenceResult':
         return cls(calculator.stratify_by, calculator.adjust_for, calculator.n_distinct, calculator.denominator)
+
+    @property
+    def data(self) -> pd.DataFrame:
+        """Returns a copy of the result data to prevent accidental modification."""
+        return self._data.copy() if self._data is not None else pd.DataFrame()
+    
+    @data.setter
+    def data(self, value: pd.DataFrame):
+        self._data = value
     
 
 class Calculator(ABC):
-    def __init__(self, model: ModelResults = None):
+    def __init__(self, model: 'ModelResult' = None):
         self.model = model
 
     @abstractmethod
@@ -158,4 +163,3 @@ def _calculate_ci(samples: np.ndarray, prob: float = 0.95) -> tuple[np.ndarray, 
     # Quantiles are calculated over the flattened chain/draw dimensions
     flat_samples = samples.reshape(-1, samples.shape[-1]) if samples.ndim > 1 else samples.flatten()
     return np.quantile(flat_samples, lower_q, axis=0), np.quantile(flat_samples, upper_q, axis=0)
-

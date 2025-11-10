@@ -89,17 +89,6 @@ class Resources:
         except ImportError:
             return False
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if self._pool is not None:
-            self._pool.shutdown(wait=False, cancel_futures=True)
-
-    def __del__(self):
-        if self._pool is not None:
-            self._pool.shutdown(wait=False, cancel_futures=True)
-
 
 
 class PathogenxWarning(Warning):
@@ -109,14 +98,14 @@ class PathogenxWarning(Warning):
 
     Examples:
         >>> import warnings
-        >>> from eris import ErisWarning
+        >>> from pathogenx import PathogenxWarning
         ... warnings.simplefilter('ignore', PathogenxWarning)
     """
 
     pass
 
 
-class DependencyWarning(ErisWarning):
+class DependencyWarning(PathogenxWarning):
     """Custom warning class for missing optional dependencies."""
     pass
 
@@ -134,7 +123,7 @@ def require(*packages: str) -> Callable:
         the original function.
 
     Examples:
-        >>> from eris import require
+        >>> from pathogenx import require
         ... @require('numpy')
         ... def some_numpy_func():
         ... ...

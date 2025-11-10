@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Literal, LiteralString, Union, Callable, Generator
+from typing import Literal, Generator
 from re import compile as regex
 from warnings import warn
 
@@ -7,20 +7,24 @@ import pandas as pd
 from scipy.sparse import coo_matrix
 from scipy.sparse.csgraph import connected_components
 
+from pathogenx import PathogenxWarning
+from pathogenx.utils import grouper
+from pathogenx.io import TextFile, PathogenwatchFile, DistFile
+
 
 # Classes --------------------------------------------------------------------------------------------------------------
 class DatasetError(Exception):
     pass
 
 
-class DatasetWarning(Warning):
+class DatasetWarning(PathogenxWarning):
     pass
 
 
 class Dataset:
     def __init__(self, genotypes: pd.DataFrame, metadata: pd.DataFrame = None,
-                 distances: tuple[coo_matrix, list[str]] = None, name: str = 'unknown', genotype_columns: set[str] = None,
-                 qc_metrics: set[str] = None, metadata_columns: set[str] = None):
+                 distances: tuple[coo_matrix, list[str]] = None, name: str = 'unknown',
+                 genotype_columns: set[str] = None, metadata_columns: set[str] = None):
         # Add genotype data and set dataset name ----------------------------------------
         self._data = genotypes
         self._data['Dataset'] = name
@@ -40,12 +44,11 @@ class Dataset:
         # Add columns -------------------------------------------------------------------
         self.metadata_columns: set[str] = metadata_columns or (set(metadata.columns) if metadata is not None else set())
         self.metadata_columns.add('Dataset')
-        self.genotype_columns: set[str] = (genotype_columns or set(
-            genotypes.columns)) - self.qc_metrics - self.metadata_columns
+        self.genotype_columns: set[str] = (genotype_columns or set(genotypes.columns)) - self.metadata_columns
 
     def __repr__(self) -> str:
         return (f'Dataset({len(self._data)} samples {"with" if self.distances is not None else "without"} distances, '
-                f'{len(self.genotype_columns)} genotypes, {len(self.qc_metrics)} QC metrics, '
+                f'{len(self.genotype_columns)} genotypes, '
                 f'{len(self.metadata_columns)} metadata variables)')
 
     def __len__(self):
@@ -59,6 +62,36 @@ class Dataset:
 
     def __iter__(self):
         return self._data.itertuples()
+
+    @classmethod
+    def from_files(cls, genotypes: TextFile, metadata: TextFile = None, distances: DistFile = None, name: str = None):
+        return cls(
+            genotypes.load(),
+            metadata.load() if metadata else None,
+            distances.load() if distances else None,
+            name
+        )
+
+    @classmethod
+    def from_pathogenwatch(cls, path: Path) -> Dataset:
+        r = regex(r'.*pathogenwatch-(?P<species>\w+)-(?P<collection>[\w-]+)-'
+                  r'(?P<analysis>(kleborate|difference-matrix|metadata))\.csv')
+        if not (files := [match for file in path.glob('*.csv') if (match := r.match(file.name))]):
+            raise DatasetError(f'Could not find any files in {path}')
+
+        dataset, files = next(grouper(files, 2))
+
+        files = {k: path / next(v).string for k, v in grouper(files, 3)}
+        genotypes, metadata, distances = files.get('kleborate'), files.get('metadata'), files.get('difference-matrix')
+        if genotypes is None:
+            raise DatasetError(f'Could not find any genotypes in {path} for {dataset}')
+
+        return cls.from_files(
+            TextFile(genotypes),
+            TextFile(metadata) if metadata else None,
+            PathogenwatchFile(distances) if distances else None,
+            dataset
+        )
 
     @property
     def data(self) -> pd.DataFrame:
@@ -144,22 +177,3 @@ class Dataset:
             raise ValueError(f"Unknown method: {method}")
 
         return self._data['Cluster']
-
-
-# Functions ------------------------------------------------------------------------------------------------------------
-def load_pathogenwatch_datasets(path: Path) -> Generator[Dataset, None, None]:
-    r = regex(r'.*pathogenwatch-(?P<species>\w+)-(?P<collection>[\w-]+)-'
-              r'(?P<analysis>(kleborate|difference-matrix|metadata))\.csv')
-    if not (files := [match for file in path.glob('*.csv') if (match := r.match(file.name))]):
-        raise DatasetError(f'Could not find any files in {path}')
-    for dataset, files in grouper(files, 2):
-        files = {k: path / next(v).string for k, v in grouper(files, 3)}
-        genotypes, metadata, distances = files.get('kleborate'), files.get('metadata'), files.get('difference-matrix')
-        if genotypes is None:
-            raise DatasetError(f'Could not find any genotypes in {path} for {dataset}')
-        yield Dataset(
-            _load_pathogenwatch_genotype(genotypes), _load_csv(metadata) if metadata else None,
-            _load_pathogenwatch_distance(distances) if distances else None,
-            name=dataset
-        )
-
