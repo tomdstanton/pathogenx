@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import pandas as pd
 import numpy as np
@@ -14,15 +14,17 @@ class CalculatorResult(ABC):
     def __init__(self):
         self._data = None
 
-    @classmethod
-    @abstractmethod
-    def from_calculator(cls, calculator: 'Calculator') -> 'CalculatorResult': pass
-
     @property
-    @abstractmethod
     def data(self) -> pd.DataFrame:
-        """The resulting data from a calculation."""
-        pass
+        """Returns a copy of the result data to prevent accidental modification."""
+        return self._data.copy() if self._data is not None else pd.DataFrame()
+
+    @data.setter
+    def data(self, value: pd.DataFrame):
+        self._data = value
+
+    def __len__(self):
+        return 0 if self._data is None else len(self._data)
 
 
 class PrevalenceResult(CalculatorResult):
@@ -37,15 +39,6 @@ class PrevalenceResult(CalculatorResult):
     @classmethod
     def from_calculator(cls, calculator: 'PrevalenceCalculator') -> 'PrevalenceResult':
         return cls(calculator.stratify_by, calculator.adjust_for, calculator.n_distinct, calculator.denominator)
-
-    @property
-    def data(self) -> pd.DataFrame:
-        """Returns a copy of the result data to prevent accidental modification."""
-        return self._data.copy() if self._data is not None else pd.DataFrame()
-    
-    @data.setter
-    def data(self, value: pd.DataFrame):
-        self._data = value
     
 
 class Calculator(ABC):
@@ -85,9 +78,13 @@ class PrevalenceCalculator(Calculator):
         self.n_distinct: Optional[List[str]] = n_distinct
         self.denominator: Optional[str] = denominator
 
-    def calculate(self, dataset: Dataset) -> PrevalenceResult:
-        result = PrevalenceResult.from_calculator(self)
-        data = dataset.data  # Gets a copy from the @property
+    def calculate(self, dataset: Union[Dataset, pd.DataFrame]) -> PrevalenceResult:
+        if isinstance(dataset, Dataset):
+            data = dataset.data  # Gets a copy from the @property
+        elif isinstance(dataset, pd.DataFrame):
+            data = dataset.copy()
+        else:
+            raise TypeError("dataset must be of type Dataset or pd.DataFrame")
 
         # 1. Calculate Denominators
         denominators = {}
@@ -139,6 +136,7 @@ class PrevalenceCalculator(Calculator):
         for col_type in denominators:
             result_data[f'rank.{col_type}'] = rank_groups[f'prop.{col_type}'].rank(method='first', ascending=False)
 
+        result = PrevalenceResult.from_calculator(self)
         result.data = result_data  # Set the result data
         return result
 

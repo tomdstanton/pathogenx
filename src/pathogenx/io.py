@@ -105,9 +105,3 @@ class DistFile(_InputFile):
             raise ValueError(f"Unknown flavour: {flavour}")
         return self
 
-
-
-# Functions ------------------------------------------------------------------------------------------------------------
-def _load_distance_square(df: pd.DataFrame, symmetrical: bool = True) -> tuple[coo_matrix, list[str]]:
-    """Converts a square DataFrame into a sparse matrix."""
-
