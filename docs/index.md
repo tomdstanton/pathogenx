@@ -21,10 +21,7 @@
 
 ### From source:
 ```shell
-# First clone the repo
-git clone https://github.com/tomdstanton/pathogenx.git && cd pathogenx
-# Then install with pip
-pip install .  # -e for editable, developers only!
+pip install git+https://github.com/tomdstanton/pathogenx.git
 ```
 
 ## Usage 🧑‍💻
