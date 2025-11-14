@@ -20,12 +20,13 @@ def prevalence_parser(subparsers):
     parser = subparsers.add_parser(
         name, description=_LOGO, prog=f'{RESOURCES.package} {name}',
         formatter_class=RawTextHelpFormatter, help=desc,
-        usage="%(prog)s <genotypes> [metadata] [distances] [options]", add_help=False
+        usage="%(prog)s <genotypes> <strata> [options]", add_help=False
     )
     inputs = parser.add_argument_group(bold('Inputs'), '')
     inputs.add_argument('genotypes', metavar='<genotypes>', help='Genotype file', type=Path)
-    inputs.add_argument('metadata', metavar='<metadata>', help='Optional metadata file', nargs='?', type=Path)
-    inputs.add_argument('distances', metavar='<distances>', help='Optional distance file', nargs='?', type=Path)
+    inputs.add_argument('strata', metavar='<strata>', help='List of columns to stratify the analysis by', nargs='+')
+    inputs.add_argument('--metadata', metavar='', help='Optional metadata file', nargs='?', type=Path)
+    inputs.add_argument('--distances', metavar='', help='Optional distance file', nargs='?', type=Path)
     inputs.add_argument('--genotype-flavour', help='Genotype file flavour (default: %(default)s)\n'
                                                    '(choices: %(choices)s)', metavar='',
                         choices=get_args(_GENOTYPE_FLAVOURS), default='pw-kleborate')
@@ -37,7 +38,6 @@ def prevalence_parser(subparsers):
                         choices=get_args(_DIST_FLAVOURS), default='pw-dist')
 
     calc = parser.add_argument_group(bold('Calculator options'), '')
-    calc.add_argument('--stratify-by', help='List of columns to stratify the analysis by', nargs='+', metavar='')
     calc.add_argument('--adjust-for', help='Optional list of columns for adjustment (e.g., Cluster)', nargs='*', metavar='')
     calc.add_argument('--n-distinct', help='Optional list of columns to calculate distinct counts for', nargs='*', metavar='')
     calc.add_argument('--denominator', help='Optional column to use as the primary grouping for denominators\n'
@@ -83,6 +83,6 @@ def main():
         dataset = Dataset.from_files(genotype_file, metadata_file, distance_file)
         if dataset.distances is not None:
             dataset.calculate_clusters(distance=args.snp_distance)
-        calculator = PrevalenceCalculator(args.stratify_by, args.adjust_for, args.n_distinct, args.denominator)
+        calculator = PrevalenceCalculator(args.strata, args.adjust_for, args.n_distinct, args.denominator)
         result = calculator.calculate(dataset)
         result.data.to_csv(stdout, sep='\t', index=False)

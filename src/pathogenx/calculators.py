@@ -188,7 +188,7 @@ class BetaDiversityCalculator(DiversityCalculator):
 
 # Functions ------------------------------------------------------------------------------------------------------------
 def _wilson_score_interval(counts: np.ndarray, denominators: np.ndarray) -> tuple[float, float, float, float]:
-    prop = (counts / denom).clip(0, 1)
+    prop = (counts / denominators).clip(0, 1)
     # Use the more robust Wilson score interval for CI
     z = norm.ppf(1 - (0.05 / 2))  # Z-score for 95% CI
     # Calculate standard error using the Wald method for reporting
