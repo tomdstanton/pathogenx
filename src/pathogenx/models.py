@@ -1,14 +1,14 @@
-# """
-# Object-Oriented Python port of a Bayesian mixed-effects model using Numpyro.
-# """
-# from abc import ABC, abstractmethod
-# from typing import Literal
-# from pathlib import Path
-# import pickle
-#
-# import pandas as pd
-# import numpy as np
-#
+"""
+Module for defining statistical models to work with `pathogenx.calculator.Calculator`s
+"""
+from abc import ABC, abstractmethod
+from typing import Literal
+from pathlib import Path
+import pickle
+
+import pandas as pd
+import numpy as np
+
 # import jax
 # import jax.numpy as jnp
 # from jax.scipy.special import expit
@@ -18,39 +18,59 @@
 # from numpyro.infer.autoguide import AutoNormal
 # import numpyro.optim as optim
 #
-# from pathogenx.dataset import Dataset
+from pathogenx.dataset import Dataset
 #
 #
 # # Classes --------------------------------------------------------------------------------------------------------------
-# class ModelResult(ABC):
-#     def __init__(self): self._data: pd.DataFrame = None
-#
-#     @abstractmethod
-#     @property
-#     def data(self) -> pd.DataFrame: return self._data.copy()
-#
-#     @abstractmethod
-#     @data.setter
-#     def data(self, value: pd.DataFrame): self._data = value
-#
-#     @abstractmethod
-#     def save(self, filepath: Path): pass
-#
-#     @classmethod
-#     @abstractmethod
-#     def from_file(cls, filepath: Path): pass
-#
-#
+class ModelResult(ABC):
+    """
+    Abstract base class for model results, designed such that we can infer the parameters of the model
+    used to generate the result, without needing the instance itself.
+    """
+
+    def __init__(self):
+        self._data = None
+
+    @property
+    def data(self) -> pd.DataFrame:
+        """Returns a copy of the result data to prevent accidental modification."""
+        return self._data.copy() if self._data is not None else pd.DataFrame()
+
+    @data.setter
+    def data(self, value: pd.DataFrame):
+        """Sets the result data stored as a private property"""
+        self._data = value
+
+    def __len__(self):
+        """Returns the length of the result data"""
+        return 0 if self._data is None else len(self._data)
+
+    @abstractmethod
+    def save(self, filepath: Path):
+        """Saves the model result to a file for future use"""
+        pass
+
+    @classmethod
+    @abstractmethod
+    def from_file(cls, filepath: Path):
+        """Loads the model result from a file into memory"""
+        pass
+
+
 # class BayesianMixedModelResult(ModelResult):
 #     def __init__(self):
 #         super().__init__()
 #
 #
-# class Model(ABC):
-#     def __init__(self): self.results = None
-#
-#     @abstractmethod
-#     def fit(self, dataset: Dataset) -> ModelResult: pass
+class Model(ABC):
+    """
+    Abstract base class for statistical models.
+    """
+
+    @abstractmethod
+    def fit(self, dataset: Dataset) -> ModelResult:
+        """Fits the model using the supplied dataset"""
+        pass
 #
 #
 # class BayesianMixedModel(Model):

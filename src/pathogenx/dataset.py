@@ -22,6 +22,20 @@ class DatasetWarning(PathogenxWarning):
 
 
 class Dataset:
+    """
+    A class to encapsulate genotype, metadata, and distance data for pathogen analysis.
+
+    This class provides a unified interface for accessing and manipulating related
+    datasets, ensuring data integrity and consistency across different analysis
+    steps. It supports loading data from various file formats and can perform
+    operations like clustering.
+
+    Attributes:
+        _data (pd.DataFrame): The primary DataFrame holding genotype and metadata.
+        distances (coo_matrix | None): Sparse distance matrix, if provided.
+        genotype_columns (set[str]): Names of columns containing genotype data.
+        metadata_columns (set[str]): Names of columns containing metadata.
+    """
     def __init__(self, genotypes: pd.DataFrame, metadata: pd.DataFrame = None,
                  distances: tuple[coo_matrix, list[str]] = None, name: str = 'unknown',
                  genotype_columns: set[str] = None, metadata_columns: set[str] = None):
@@ -65,6 +79,19 @@ class Dataset:
 
     @classmethod
     def from_files(cls, genotypes: GenotypeFile, metadata: MetaFile = None, distances: DistFile = None, name: str = None):
+        """
+        Initialises a `Dataset` instance from `_InputFile` instances.
+
+        Parameters:
+            genotypes (GenotypeFile): An instance of `GenotypeFile` containing genotype data.
+            metadata (MetaFile, optional): An instance of `MetaFile` containing metadata. Defaults to None.
+            distances (DistFile, optional): An instance of `DistFile` containing distance data. Defaults to None.
+            name (str, optional): A name for the dataset. Defaults to None, in which case the name will be
+                                  inferred from the genotype file.
+
+        Returns:
+            cls: A new `Dataset` instance populated with the provided data.
+        """
         return cls(
             genotypes.load(),
             metadata.load() if metadata else None,
@@ -74,6 +101,23 @@ class Dataset:
 
     @classmethod
     def from_pathogenwatch(cls, path: Path) -> 'Dataset':
+        """
+        Initialises a `Dataset` instance from a Pathogenwatch folder.
+
+        This method expects a folder containing CSV files downloaded from Pathogenwatch,
+        specifically looking for files named according to the Pathogenwatch convention
+        (e.g., `pathogenwatch-species-collection-analysis.csv`). It automatically
+        identifies and loads genotype, metadata, and distance files.
+
+        Parameters:
+            path (Path): The path to the directory containing Pathogenwatch CSV files.
+
+        Returns:
+            Dataset: A new `Dataset` instance populated with data from the Pathogenwatch files.
+
+        Raises:
+            DatasetError: If no relevant Pathogenwatch files are found or if genotype data is missing.
+        """
         r = regex(r'.*pathogenwatch-(?P<species>\w+)-(?P<collection>[\w-]+)-'
                   r'(?P<analysis>(kleborate|difference-matrix|metadata))\.csv')
         if not (files := [match for file in path.glob('*.csv') if (match := r.match(file.name))]):
@@ -101,6 +145,7 @@ class Dataset:
         return self._data.copy()
 
     def samples(self):
+        """Returns a list of sample names (the index of the internal DataFrame)."""
         return self._data.index
 
     def calculate_clusters(self, method: Literal['connected_components', 'variables'] = 'connected_components',

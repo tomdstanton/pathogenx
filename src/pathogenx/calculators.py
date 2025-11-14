@@ -1,3 +1,7 @@
+"""
+Module for calculating insights from genotyping data such prevalence
+"""
+
 from abc import ABC, abstractmethod
 from typing import List, Optional, Union
 
@@ -11,6 +15,10 @@ from pathogenx.dataset import Dataset
 
 # Classes --------------------------------------------------------------------------------------------------------------
 class CalculatorResult(ABC):
+    """
+    Abstract base class for calculator results, designed such that we can infer the parameters of the calculator
+    used to generate the result, without needing the instance itself.
+    """
     def __init__(self):
         self._data = None
 
@@ -21,13 +29,24 @@ class CalculatorResult(ABC):
 
     @data.setter
     def data(self, value: pd.DataFrame):
+        """Sets the result data stored as a private property"""
         self._data = value
 
     def __len__(self):
+        """Returns the length of the result data"""
         return 0 if self._data is None else len(self._data)
 
 
 class PrevalenceResult(CalculatorResult):
+    """
+    Class to store the results of a `PrevalenceCalculator`.
+
+    Parameters:
+        stratified_by (list[str]): List of columns the result is stratified by - in order of strata level.
+        adjusted_for (list[str]): Optional list of columns the prevalences were adjusted for (e.g., 'Cluster').
+        n_distinct (list[str]): Optional list of columns distinct counts (per-strata) were generated for.
+        denominator (str): Optional column indicating the denominator stratum.
+    """
     def __init__(self, stratified_by: List[str], adjusted_for: List[str] = None, n_distinct: List[str] = None,
                  denominator: str = None):
         super().__init__()
@@ -38,6 +57,7 @@ class PrevalenceResult(CalculatorResult):
 
     @classmethod
     def from_calculator(cls, calculator: 'PrevalenceCalculator') -> 'PrevalenceResult':
+        """Sets up a `PrevalenceResult` instance using a `PrevalenceCalculator` instance."""
         return cls(calculator.stratify_by, calculator.adjust_for, calculator.n_distinct, calculator.denominator)
     
 
