@@ -13,7 +13,6 @@ from pathogenx.io import _GENOTYPE_FLAVOURS, _META_FLAVOURS, _DIST_FLAVOURS
 _LOGO = (f"\033[1;35m========================|> PathoGenX |>========================\n"
          f"{'A Python library for Pathogen Genotype eXploration':^63}\033[0m")
 
-
 # Functions ------------------------------------------------------------------------------------------------------------
 def prevalence_parser(subparsers):
     name, desc = 'prevalence', 'Calculate prevalence in a dataset'
@@ -27,14 +26,14 @@ def prevalence_parser(subparsers):
     inputs.add_argument('strata', metavar='<strata>', help='List of columns to stratify the analysis by', nargs='+')
     inputs.add_argument('--metadata', metavar='', help='Optional metadata file', nargs='?', type=Path)
     inputs.add_argument('--distances', metavar='', help='Optional distance file', nargs='?', type=Path)
-    inputs.add_argument('--genotype-flavour', help='Genotype file flavour (default: %(default)s)\n'
-                                                   '(choices: %(choices)s)', metavar='',
+    inputs.add_argument('--genotype-flavour', help='Genotype file flavour (default: {default}s)\n'
+                                                   '(choices: {choices}s)', metavar='',
                         choices=get_args(_GENOTYPE_FLAVOURS), default='pw-kleborate')
-    inputs.add_argument('--metadata-flavour', help='Metadata file flavour (default: %(default)s)\n'
-                                                   '(choices: %(choices)s)', metavar='',
+    inputs.add_argument('--metadata-flavour', help='Metadata file flavour (default: {default}s)\n'
+                                                   '(choices: {choices}s)', metavar='',
                         choices=get_args(_META_FLAVOURS), default='pw-metadata')
-    inputs.add_argument('--distance-flavour', help='Distance file flavour (default: %(default)s)\n'
-                                                   '(choices: %(choices)s)', metavar='',
+    inputs.add_argument('--distance-flavour', help='Distance file flavour (default: {default}s)\n'
+                                                   '(choices: {choices}s)', metavar='',
                         choices=get_args(_DIST_FLAVOURS), default='pw-dist')
 
     calc = parser.add_argument_group(bold('Calculator options'), '')
@@ -46,10 +45,11 @@ def prevalence_parser(subparsers):
     calc = parser.add_argument_group(bold('Clustering options'), '')
     calc.add_argument('--snp-distance', type=int, default=20, metavar='',
                       help='The maximum distance for two samples to be considered connected.\n'
-                           'Only used when `method` is connected_components (default: %(default)s)')
+                           'Only used when `method` is connected_components (default: {default}s)')
 
     opts = parser.add_argument_group(bold('Other options'), '')
-    opts.add_argument('-v', '--version', help='Show version number and exit', action='version')
+    opts.add_argument('-v', '--version', help='Show version number and exit', action='version',
+                      version=RESOURCES.metadata.get('version', '0.0.0'))
     opts.add_argument('-h', '--help', help='Show this help message and exit', action='help')
 
 
@@ -57,14 +57,15 @@ def prevalence_parser(subparsers):
 def main():
     parser = ArgumentParser(
         description=_LOGO,
-        usage="%(prog)s <command>", add_help=False, prog=RESOURCES.package, formatter_class=RawDescriptionHelpFormatter,
+        usage="{prog}s <command>", add_help=False, prog=RESOURCES.package, formatter_class=RawDescriptionHelpFormatter
     )
     subparsers = parser.add_subparsers(
-        title=bold('Command'), dest='command', metavar='<command>', required=True, help=None,
+        title=bold('Command'), dest='command', metavar='<command>', required=True, help=None
     )
     prevalence_parser(subparsers)
     opts = parser.add_argument_group(bold('Other options'), '')
-    opts.add_argument('-v', '--version', help='Show version number and exit', action='version')
+    opts.add_argument('-v', '--version', help='Show version number and exit', action='version',
+                      version=RESOURCES.metadata.get('version', '0.0.0'))
     opts.add_argument('-h', '--help', help='Show this help message and exit', action='help')
 
     args = parser.parse_args()
