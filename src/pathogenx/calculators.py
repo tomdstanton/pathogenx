@@ -75,11 +75,11 @@ class PrevalenceCalculator(Calculator):
     This class is designed to replicate the logic of the R 'prevalence' function
     using pandas for efficient data manipulation.
     
-     Attributes:
-        stratify_by: List of columns to stratify the analysis by.
-        adjust_for: Optional list of columns for adjustment (e.g., 'Cluster').
-        n_distinct: Optional list of columns to calculate distinct counts for.
-        denominator: Optional column to use as the primary grouping for denominators.
+     Parameters:
+        stratify_by (list[str]): List of columns to stratify the analysis by.
+        adjust_for (list[str]): Optional list of columns for adjustment (e.g., 'Cluster').
+        n_distinct (list[str]): Optional list of columns to calculate distinct counts for.
+        denominator (str): Optional column to use as the primary grouping for denominators.
                      If None, the first column in stratify_by is used.
     """
     def __init__(self, stratify_by: List[str], adjust_for: List[str] = None, n_distinct: List[str] = None,
@@ -99,6 +99,18 @@ class PrevalenceCalculator(Calculator):
         self.denominator: Optional[str] = denominator
 
     def calculate(self, dataset: Union[Dataset, pd.DataFrame]) -> PrevalenceResult:
+        """
+        Calculates prevalence statistics based on the provided dataset.
+
+        This method computes raw and optionally adjusted counts, proportions,
+        standard errors, and 95% confidence intervals (using the Wilson score
+        interval method) for specified strata. It also calculates distinct
+        counts for designated columns and ranks the prevalences within
+        denominator groups.
+
+        Parameters:
+            dataset (Dataset | pd.Dataframe): Dataset to calculate prevalence of
+        """
         if isinstance(dataset, Dataset):
             data = dataset.data  # Gets a copy from the @property
         elif isinstance(dataset, pd.DataFrame):
@@ -161,16 +173,29 @@ class PrevalenceCalculator(Calculator):
         return result
 
 
+class DiversityCalculator(Calculator):
+    pass
+
+
+class AlphaDiversityCalculator(DiversityCalculator):
+    pass
+
+
+class BetaDiversityCalculator(DiversityCalculator):
+    pass
+
+
+
 # Functions ------------------------------------------------------------------------------------------------------------
-def _wilson_score_interval(count, denom) -> tuple[float, float, float, float]:
-    prop = (count / denom).clip(0, 1)
+def _wilson_score_interval(counts: np.ndarray, denominators: np.ndarray) -> tuple[float, float, float, float]:
+    prop = (counts / denom).clip(0, 1)
     # Use the more robust Wilson score interval for CI
     z = norm.ppf(1 - (0.05 / 2))  # Z-score for 95% CI
     # Calculate standard error using the Wald method for reporting
-    se = np.sqrt(prop * (1 - prop) / denom)
+    se = np.sqrt(prop * (1 - prop) / denominators)
     # Wilson score interval calculation
-    center = (count + z ** 2 / 2) / (denom + z ** 2)
-    width = (z / (denom + z ** 2)) * np.sqrt((prop * (1 - prop) * denom) + (z ** 2 / 4))
+    center = (counts + z ** 2 / 2) / (denominators + z ** 2)
+    width = (z / (denominators + z ** 2)) * np.sqrt((prop * (1 - prop) * denominators) + (z ** 2 / 4))
     return prop, se, center - width, center + width
 
 

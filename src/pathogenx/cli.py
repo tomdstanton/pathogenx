@@ -20,7 +20,7 @@ def prevalence_parser(subparsers):
     parser = subparsers.add_parser(
         name, description=_LOGO, prog=f'{RESOURCES.package} {name}',
         formatter_class=RawTextHelpFormatter, help=desc,
-        usage="%(prog)s <genotype> [metadata] [distance] [options]", add_help=False
+        usage="%(prog)s <genotypes> [metadata] [distances] [options]", add_help=False
     )
     inputs = parser.add_argument_group(bold('Inputs'), '')
     inputs.add_argument('genotypes', metavar='<genotypes>', help='Genotype file', type=Path)
@@ -46,7 +46,7 @@ def prevalence_parser(subparsers):
     calc = parser.add_argument_group(bold('Clustering options'), '')
     calc.add_argument('--snp-distance', type=int, default=20, metavar='',
                       help='The maximum distance for two samples to be considered connected.\n'
-                           'Only used when `method` is connected_components')
+                           'Only used when `method` is connected_components (default: %(default)s)')
 
     opts = parser.add_argument_group(bold('Other options'), '')
     opts.add_argument('-v', '--version', help='Show version number and exit', action='version')

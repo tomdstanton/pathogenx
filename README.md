@@ -35,7 +35,7 @@ For API usage, please refer to the [reference documentation](https://tomdstanton
 
 #### Arguments
 ```shell
-usage: pathogenx prevalence <genotype> [metadata] [distance] [options]
+usage: pathogenx prevalence <genotypes> [metadata] [distances] [options]
 
 ========================|> PathoGenX |>========================
       A Python library for Pathogen Genotype eXploration       
@@ -64,7 +64,7 @@ Calculator options:
 Clustering options:
 
   --snp-distance        The maximum distance for two samples to be considered connected.
-                        Only used when `method` is connected_components
+                        Only used when `method` is connected_components (default: 20)
 
 Other options:
 
