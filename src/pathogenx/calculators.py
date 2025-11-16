@@ -4,13 +4,15 @@ Module for calculating insights from genotyping data such prevalence
 
 from abc import ABC, abstractmethod
 from typing import List, Optional, Union
-
 import pandas as pd
 import numpy as np
 from scipy.stats import norm
 
 from pathogenx.dataset import Dataset
 # from .models import ModelResult
+
+# Constants ------------------------------------------------------------------------------------------------------------
+# _ALPHA_DIVERSITY_METRICS = LiteralString['simpson', 'simpson_e', 'simpson_d']
 
 
 # Classes --------------------------------------------------------------------------------------------------------------
@@ -173,16 +175,29 @@ class PrevalenceCalculator(Calculator):
         return result
 
 
-class DiversityCalculator(Calculator):
-    pass
-
-
-class AlphaDiversityCalculator(DiversityCalculator):
-    pass
-
-
-class BetaDiversityCalculator(DiversityCalculator):
-    pass
+# class DiversityCalculator(Calculator):
+#     pass
+#
+#
+# class AlphaDiversityCalculator(DiversityCalculator):
+#     def __init__(self, finite: bool = False,
+#                  metrics: list[_ALPHA_DIVERSITY_METRICS] = get_args(_ALPHA_DIVERSITY_METRICS)):
+#         super().__init__()
+#         self.finite: bool = finite
+#         self.metrics: list[_ALPHA_DIVERSITY_METRICS] = metrics
+#
+#     def calculate(self, dataset: Dataset):
+#
+#
+#     def simpson(self, counts, finite=False):
+#         return 1 - dominance(counts, finite=finite)
+#
+#     def simpson_e(self, counts):
+#         return 1 / (counts.size * dominance(counts))
+#
+#
+# class BetaDiversityCalculator(DiversityCalculator):
+#     pass
 
 
 

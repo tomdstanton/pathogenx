@@ -16,8 +16,12 @@
 ## Introduction 🌐
 `pathogenx` is a Python library for Pathogen Genotype eXploration.
 
+[!WARNING]
+🚧 
+This package is currently under construction, proceed with caution
+🚧
+
 ## Installation ⚙️
-**NOTE: pathogenx is not yet on PyPI or Bioconda, please install from source until it is released**
 
 ### From source:
 ```shell

@@ -11,9 +11,17 @@ pathogenx = "pathogenx.cli:main"
 
 [project.optional-dependencies]
 test = ["pytest"]
-models = ["numpyro"]
+#models = ["numpyro"]
 docs = ["mkdocs-material", "mkdocs-api-autonav>=0.3.0,<0.4"]
-dev = ["pathogenx[test,docs,models]"]
+app = [
+    "shiny",
+    "geopandas",
+    "shinyswatch",
+    "plotly",
+    "faicons",
+    "shiny-sortable"
+]
+dev = ["pathogenx[test,docs,app]"]
 
 [build-system]
 build-backend = "hatchling.build"

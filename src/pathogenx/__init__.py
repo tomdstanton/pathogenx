@@ -144,4 +144,4 @@ def require(*packages: str) -> Callable:
 
 
 # Constants ------------------------------------------------------------------------------------------------------------
-RESOURCES = Resources('numpyro')
+RESOURCES = Resources('pathogenx.app')

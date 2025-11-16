@@ -12,13 +12,13 @@ from pathogenx.io import _GENOTYPE_FLAVOURS, _META_FLAVOURS, _DIST_FLAVOURS
 # Constants ------------------------------------------------------------------------------------------------------------
 _LOGO = (f"\033[1;35m========================|> PathoGenX |>========================\n"
          f"{'A Python library for Pathogen Genotype eXploration':^63}\033[0m")
+_VERSION = RESOURCES.metadata.get('version', '0.0.0')
 
 # Functions ------------------------------------------------------------------------------------------------------------
 def prevalence_parser(subparsers):
     name, desc = 'prevalence', 'Calculate prevalence in a dataset'
     parser = subparsers.add_parser(
-        name, description=_LOGO, prog=f'{RESOURCES.package} {name}',
-        formatter_class=RawTextHelpFormatter, help=desc,
+        name, description=_LOGO, prog=f'{RESOURCES.package} {name}', formatter_class=RawTextHelpFormatter, help=desc,
         usage="%(prog)s <genotypes> <strata> [options]", add_help=False
     )
     inputs = parser.add_argument_group(bold('Inputs'), '')
@@ -48,28 +48,32 @@ def prevalence_parser(subparsers):
                            'Only used when `method` is connected_components (default: {default}s)')
 
     opts = parser.add_argument_group(bold('Other options'), '')
-    opts.add_argument('-v', '--version', help='Show version number and exit', action='version',
-                      version=RESOURCES.metadata.get('version', '0.0.0'))
+    opts.add_argument('-v', '--version', help='Show version number and exit', action='version', version=_VERSION)
     opts.add_argument('-h', '--help', help='Show this help message and exit', action='help')
+
 
 
 # Main CLI Entry Point -------------------------------------------------------------------------------------------------
 def main():
     parser = ArgumentParser(
-        description=_LOGO,
-        usage="{prog}s <command>", add_help=False, prog=RESOURCES.package, formatter_class=RawDescriptionHelpFormatter
+        description=_LOGO, usage="{prog}s <command>", add_help=False, prog=RESOURCES.package,
+        formatter_class=RawDescriptionHelpFormatter
     )
     subparsers = parser.add_subparsers(
         title=bold('Command'), dest='command', metavar='<command>', required=True, help=None
     )
+    # Add subparsers
     prevalence_parser(subparsers)
+    if 'pathogenx.app' in RESOURCES.optional_packages:
+        from pathogenx.app.utils import app_cli_parser
+        app_cli_parser(subparsers, RESOURCES.package, _LOGO, RawTextHelpFormatter, _VERSION)
+    # Add options
     opts = parser.add_argument_group(bold('Other options'), '')
-    opts.add_argument('-v', '--version', help='Show version number and exit', action='version',
-                      version=RESOURCES.metadata.get('version', '0.0.0'))
+    opts.add_argument('-v', '--version', help='Show version number and exit', action='version', version=_VERSION)
     opts.add_argument('-h', '--help', help='Show this help message and exit', action='help')
-
+    # Parse args
     args = parser.parse_args()
-
+    # Run the appropriate command
     if args.command == 'prevalence':
         from pathogenx.io import GenotypeFile, MetaFile, DistFile
         from pathogenx.dataset import Dataset
@@ -87,3 +91,12 @@ def main():
         calculator = PrevalenceCalculator(args.strata, args.adjust_for, args.n_distinct, args.denominator)
         result = calculator.calculate(dataset)
         result.data.to_csv(stdout, sep='\t', index=False)
+    elif args.command == 'app':
+        from pathogenx.app import app
+        from shiny import run_app
+        run_app(
+            app, host=args.host, port=args.port, autoreload_port=args.autoreload_port, reload=args.reload,
+            ws_max_size=args.ws_max_size, log_level=args.log_level, app_dir=args.app_dir, factory=args.factory,
+            launch_browser=args.launch_browser, dev_mode=args.dev_mode
+        )
+
