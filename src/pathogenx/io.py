@@ -6,9 +6,9 @@ from scipy.sparse import coo_matrix
 
 
 # Constants ------------------------------------------------------------------------------------------------------------
-_GENOTYPE_FLAVOURS = Literal['kleborate', 'pw-kleborate', 'kaptive']
+_GENOTYPE_FLAVOURS = Literal['pw-kleborate', 'kleborate', 'kaptive']
 _META_FLAVOURS = Literal['pw-metadata']
-_DIST_FLAVOURS = Literal['mash', 'ska1', 'ska2', 'pw-dist']
+_DIST_FLAVOURS = Literal['pw-dist', 'mash', 'ska1', 'ska2']
 
 
 # Classes --------------------------------------------------------------------------------------------------------------

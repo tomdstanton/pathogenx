@@ -18,8 +18,7 @@ app = [
     "geopandas",
     "shinyswatch",
     "plotly",
-    "faicons",
-    "shiny-sortable"
+    "faicons"
 ]
 dev = ["pathogenx[test,docs,app]"]
 

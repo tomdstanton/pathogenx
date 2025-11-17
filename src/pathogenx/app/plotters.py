@@ -15,7 +15,7 @@ from pathogenx.calculators import PrevalenceResult
 from pathogenx.app.utils import nice_name as _nice_name, plural_name as _plural_name
 
 # Constants ------------------------------------------------------------------------------------------------------------
-_NE_COUNTRIES = Path('src', 'klebnnsapp', 'data', 'world-administrative-boundaries')
+_NE_COUNTRIES = Path(__file__).parent / "data" / "world-administrative-boundaries"
 _WORLD = geopandas.read_file(_NE_COUNTRIES)
 _THEME = {
     'template': 'ggplot2',

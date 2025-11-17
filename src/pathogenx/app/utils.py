@@ -87,7 +87,7 @@ def app_cli_parser(subparsers, package: str, description: str, formatter_class, 
     name, desc = 'app', 'Run the Shiny app'
     parser = subparsers.add_parser(
         name, description=description, prog=f'{package} {name}',
-        formatter_class=formatter_class, help=desc, usage="%(prog)s", add_help=False
+        formatter_class=formatter_class, help=desc, usage="%(prog)s [options]", add_help=False
     )
     app = parser.add_argument_group(bold('App options'), 'Arguments to be passed to `shiny.run_app()`\n')
     app.add_argument('--host', default='127.0.0.1', metavar='',
@@ -98,12 +98,12 @@ def app_cli_parser(subparsers, package: str, description: str, formatter_class, 
     app.add_argument('--autoreload-port', default=0, type=int, metavar='',
                      help='The port that should be used for an additional websocket that is used to\n'
                           'support hot-reload. Set to 0 to use a random port (default: {default}s)')
-    app.add_argument('--reload', action='store_true', metavar='', help='Enable auto-reload')
+    app.add_argument('--reload', action='store_true', help='Enable auto-reload')
     app.add_argument('--ws-max-size', default=16777216, type=int, metavar='',
                      help='WebSocket max size message in bytes (default: {default}s)')
-    app.add_argument('--launch-browser', action='store_true', metavar='',
+    app.add_argument('--launch-browser', action='store_true',
                      help='Launch app browser after app starts, using the Python webbrowser module')
-    app.add_argument('--dev-mode', action='store_true', metavar='', help='Run in development mode')
+    app.add_argument('--dev-mode', action='store_true', help='Run in development mode')
 
     opts = parser.add_argument_group(bold('Other options'), '')
     opts.add_argument('-v', '--version', help='Show version number and exit', action='version', version=version)

@@ -92,11 +92,8 @@ def main():
         result = calculator.calculate(dataset)
         result.data.to_csv(stdout, sep='\t', index=False)
     elif args.command == 'app':
-        from pathogenx.app import app
         from shiny import run_app
         run_app(
-            app, host=args.host, port=args.port, autoreload_port=args.autoreload_port, reload=args.reload,
-            ws_max_size=args.ws_max_size, log_level=args.log_level, app_dir=args.app_dir, factory=args.factory,
-            launch_browser=args.launch_browser, dev_mode=args.dev_mode
+            "pathogenx.app:app", host=args.host, port=args.port, autoreload_port=args.autoreload_port,
+            reload=args.reload, ws_max_size=args.ws_max_size, launch_browser=args.launch_browser, dev_mode=args.dev_mode
         )
-
