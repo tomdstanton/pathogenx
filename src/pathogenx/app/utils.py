@@ -89,18 +89,18 @@ def app_cli_parser(subparsers, package: str, description: str, formatter_class, 
         name, description=description, prog=f'{package} {name}',
         formatter_class=formatter_class, help=desc, usage="%(prog)s [options]", add_help=False
     )
-    app = parser.add_argument_group(bold('App options'), 'Arguments to be passed to `shiny.run_app()`\n')
+    app = parser.add_argument_group(bold('App options'), '\nArguments to be passed to `shiny.run_app()`')
     app.add_argument('--host', default='127.0.0.1', metavar='',
-                     help='The address that the app should listen on (default: {default}s)')
+                     help='The address that the app should listen on (default: %(default)s)')
     app.add_argument('--port', default=8000, type=int, metavar='',
                      help='The port that the app should listen on.\n'
-                          'Set to 0 to use a random port (default: {default}s)')
+                          'Set to 0 to use a random port (default: %(default)s)')
     app.add_argument('--autoreload-port', default=0, type=int, metavar='',
                      help='The port that should be used for an additional websocket that is used to\n'
-                          'support hot-reload. Set to 0 to use a random port (default: {default}s)')
+                          'support hot-reload. Set to 0 to use a random port (default: %(default)s)')
     app.add_argument('--reload', action='store_true', help='Enable auto-reload')
     app.add_argument('--ws-max-size', default=16777216, type=int, metavar='',
-                     help='WebSocket max size message in bytes (default: {default}s)')
+                     help='WebSocket max size message in bytes (default: %(default)s)')
     app.add_argument('--launch-browser', action='store_true',
                      help='Launch app browser after app starts, using the Python webbrowser module')
     app.add_argument('--dev-mode', action='store_true', help='Run in development mode')

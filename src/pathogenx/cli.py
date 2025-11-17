@@ -26,14 +26,14 @@ def prevalence_parser(subparsers):
     inputs.add_argument('strata', metavar='<strata>', help='List of columns to stratify the analysis by', nargs='+')
     inputs.add_argument('--metadata', metavar='', help='Optional metadata file', nargs='?', type=Path)
     inputs.add_argument('--distances', metavar='', help='Optional distance file', nargs='?', type=Path)
-    inputs.add_argument('--genotype-flavour', help='Genotype file flavour (default: {default}s)\n'
-                                                   '(choices: {choices}s)', metavar='',
+    inputs.add_argument('--genotype-flavour', help='Genotype file flavour (default: %(default)s)\n'
+                                                   '(choices: %(choices)s)', metavar='',
                         choices=get_args(_GENOTYPE_FLAVOURS), default='pw-kleborate')
-    inputs.add_argument('--metadata-flavour', help='Metadata file flavour (default: {default}s)\n'
-                                                   '(choices: {choices}s)', metavar='',
+    inputs.add_argument('--metadata-flavour', help='Metadata file flavour (default: %(default)s)\n'
+                                                   '(choices: %(choices)s)', metavar='',
                         choices=get_args(_META_FLAVOURS), default='pw-metadata')
-    inputs.add_argument('--distance-flavour', help='Distance file flavour (default: {default}s)\n'
-                                                   '(choices: {choices}s)', metavar='',
+    inputs.add_argument('--distance-flavour', help='Distance file flavour (default: %(default)s)\n'
+                                                   '(choices: %(choices)s)', metavar='',
                         choices=get_args(_DIST_FLAVOURS), default='pw-dist')
 
     calc = parser.add_argument_group(bold('Calculator options'), '')
@@ -45,7 +45,7 @@ def prevalence_parser(subparsers):
     calc = parser.add_argument_group(bold('Clustering options'), '')
     calc.add_argument('--snp-distance', type=int, default=20, metavar='',
                       help='The maximum distance for two samples to be considered connected.\n'
-                           'Only used when `method` is connected_components (default: {default}s)')
+                           'Only used when `method` is connected_components (default: %(default)s)')
 
     opts = parser.add_argument_group(bold('Other options'), '')
     opts.add_argument('-v', '--version', help='Show version number and exit', action='version', version=_VERSION)

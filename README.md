@@ -16,10 +16,8 @@
 ## Introduction 🌐
 `pathogenx` is a Python library for Pathogen Genotype eXploration.
 
-[!WARNING]
-🚧 
-This package is currently under construction, proceed with caution
-🚧
+> [!WARNING]
+> 🚧 This package is currently under construction, proceed with caution 🚧
 
 ## Installation ⚙️
 
@@ -83,3 +81,12 @@ Other options:
   -h, --help           Show this help message and exit
 ```
 
+## Web-app
+The PathoGenX app provides a web-based GUI for the exploration of pathogen genotyping data. It is an optional module
+that can be installed like so:
+
+```shell
+pip install pathogenx[app]
+```
+
+Read more about the app [here](src/pathogenx/app/README.md)
