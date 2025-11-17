@@ -1,3 +1,6 @@
+"""
+Module for dealing with the web-app user interface
+"""
 from shiny import ui
 from typing import get_args
 from faicons import icon_svg as icon
@@ -6,6 +9,7 @@ from pathogenx.app.utils import create_logo_link
 from pathogenx.io import _GENOTYPE_FLAVOURS, _META_FLAVOURS, _DIST_FLAVOURS
 
 _FLAVOURS = {'genotype': get_args(_GENOTYPE_FLAVOURS), 'metadata': get_args(_META_FLAVOURS), 'distance': get_args(_DIST_FLAVOURS)}
+_VAR_CATEGORIES = ('genotype', 'adjustment', 'spatial', 'temporal', 'custom')
 
 
 # Define all hyperlinked images here -------------------------------------------
@@ -67,46 +71,36 @@ home = ui.nav_panel(
 )
 
 # genotype selector -------------------------------------------------------------
-variable_selector = ui.accordion_panel(
-    ui.h5("Variable selector"),
-    ui.input_selectize('genotype_variable', 'Select genotype variable', choices=['ST']),
-    ui.input_selectize('country_variable', 'Select country variable', choices=['Country']),
-    ui.input_selectize('region_variable', 'Select region variable', choices=['Region']),
-    value="variable_selector",
-    icon=icon("syringe"),
-)
+def _setup_variables(i: str):
+    return ui.input_selectize(f'{i}_variable', f'Select {i} variable', choices=[])
+
+def _setup_filters(i: str):
+    id_, label = f'{i}_filter', f'Filter by {i}'
+    if i == 'temporal':
+        return ui.input_slider(id_, label, min=1900, max=2050, value=(1900, 2050), step=1)
+    return ui.input_selectize(id_, f'Filter by {i} variable', choices=[],
+                              multiple=i != 'genotype')
 
 # Data filters -----------------------------------------------------------------
 sidebar = ui.sidebar(
     ui.accordion(
-        variable_selector,
+        ui.accordion_panel(
+            ui.h5("Variable selector"), *map(_setup_variables, _VAR_CATEGORIES),
+            value="variable_selector", icon=icon("clock")
+        ),
+        ui.accordion_panel(
+            ui.h5("Data filters"), *map(_setup_filters, _VAR_CATEGORIES),
+            value="filter_selector", icon=icon("filter")
+        ),
         id="sidebar_accordion",
-        multiple=False,
+        multiple=True,
         open="data_selector",
     ),
     width=350,
     id="sidebar",
     open="closed",
-    bg="white",
+    # bg="white",
 )
-
-# def _create_file_upload(ftype, flavours):
-#     return ui.row(
-#         ui.column(
-#             4,
-#             ui.input_file(
-#                 f"{ftype}_upload", f"Select {ftype} file",
-#                 accept=[".csv", ".txt", ".tsv"], placeholder=f'{ftype}.csv'
-#             ),
-#         ),
-#         ui.column(
-#             4,
-#             ui.input_select(
-#                 f"{ftype}_flavour", f"{ftype[0].upper()}{ftype[1:]} file type",
-#                 choices=flavours, selected=flavours[0]
-#             )
-#         ),
-#     )
 
 def _create_upload(ftype: str):
     return ui.input_file(f"{ftype}_upload", f"Select {ftype} file", accept=[".csv", ".txt", ".tsv"],
@@ -118,7 +112,6 @@ def _create_flavours(i: tuple[str, list[str]]):
     return ui.input_select(f"{ftype}_flavour", f"{ftype[0].upper()}{ftype[1:]} file flavour", choices=flav,
                            selected=flav[0])
 
-
 upload_panel = ui.accordion_panel(
     ui.h4("Upload files"),
     ui.row(
@@ -128,7 +121,7 @@ upload_panel = ui.accordion_panel(
             4,
             ui.input_slider("snp_distance", "SNP distance for clustering", min=0, max=100, value=20, step=1),
             ui.input_select("cluster_method", "Select clustering method", choices=['connected_components']),
-            ui.input_action_button('calc_clusters', 'Calculate clusters', class_='btn-primary', width='300px'),
+            ui.input_action_button('load_data', 'Load data', class_='btn-primary', width='300px'),
             ui.hr(),
             ui.input_action_button('upload_reset', 'Reset uploads', class_='btn-danger', width='300px'),
         )
@@ -140,14 +133,13 @@ upload_panel = ui.accordion_panel(
 # Panels to be inserted dynamically
 prevalence_panel = ui.accordion_panel(
     ui.h4("Total prevalence"),
-    ui.output_plot("merged_plot", height="600px"),
+    ui.output_plot("merged_plot"),
     value="prevalence_panel",
     icon=icon("earth-africa"),
 )
 
 coverage_panel = ui.accordion_panel(
-    ui.h4("Geographical coverage"),
-    # ui.input_select("coverage_group", "Calculate coverage of", choices=[], selected=None),
+    ui.h4("Spatial coverage"),
     ui.layout_column_wrap(
         ui.card(ui.card_body(ui.output_plot("coverage_plot"), class_="p-0"), full_screen=True),
         ui.card(ui.card_body(ui.output_ui("map"), class_="p-0"), full_screen=True),
@@ -184,7 +176,7 @@ main_panel = ui.nav_panel(
             "the data and selecting spatio-temporal variables for regional prevalence or "
             "further filtering.</p>"
         ),
-        ui.output_text("summary"),
+        # ui.output_text("summary"),
         ui.accordion(upload_panel, id="accordion", multiple=False, open=True),
     ),
     icon=icon("laptop"),
@@ -196,7 +188,7 @@ main_ui = ui.page_navbar(
     main_panel,
     title='PathoGenX',
     footer=footer,
-    theme=theme.lux,
+    theme=theme.lumen,
     fillable=False,
     window_title="PathoGenX"
 )

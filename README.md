@@ -13,11 +13,29 @@
 [![Changelog](https://img.shields.io/badge/keep%20a-changelog-8A0707.svg?maxAge=2678400&style=flat-square)](https://github.com/tomdstanton/pathogenx/blob/main/CHANGELOG.md)
 [![Downloads](https://img.shields.io/pypi/dm/pathogenx?style=flat-square&color=303f9f&maxAge=86400&label=downloads)](https://pepy.tech/project/pathogenx)
 
-## Introduction 🌐
-`pathogenx` is a Python library for Pathogen Genotype eXploration.
-
 > [!WARNING]
 > 🚧 This package is currently under construction, proceed with caution 🚧
+
+## Introduction 🌐
+`pathogenx` is a Python library for Pathogen Genotype eXploration. It started a Python port of the 
+[KleborateR](https://github.com/klebgenomics/KleborateR) R code to parse 
+[Kleborate](https://github.com/klebgenomics/Kleborate) and other data from [Pathogenwatch](https://pathogen.watch/),
+to calculate prevalence data for sero-epidemiology, and to provide a backend for our 
+[neonatal sepsis sero-epi app](https://github.com/klebgenomics/KlebNNSapp).
+
+`pathogenx` aims to be more generalised towards other bacterial genotyping and distance calculation methods, and
+will eventually force complicity with the 
+[PHA4GE genotyping-specification](https://github.com/pha4ge/genotyping-specification).
+
+`pathogenx` revolves around genotyping `Dataset` objects, which have the following attributes:
+
+- Genotyping data - a `pandas` dataframe containing the parsed output of a genotyping tool. 
+- Optional metadata - joined to genotyping results upon initialisation, possibly containing spatio-temporal data.
+- Optional distances - Represented as a `scipy.sparse` matrix of pairwise distances, parsed from the outputs of tools 
+- such as `mash`.
+
+We also define `Calculator`s, which calculate informative information from genotyping data, such as prevalence and 
+diversity.
 
 ## Installation ⚙️
 
@@ -31,6 +49,9 @@ The information below explains how to use the `pathogenx` CLI.
 For API usage, please refer to the [reference documentation](https://tomdstanton.github.io/pathogenx/reference/pathogenx/).
 
 ### Prevalence 🌎
+The `PrevalenceCalculator` object to calculate prevalence from a dataset is exposed via the command-line. For more
+information about the calculator, please refer to the 
+[API docs](https://tomdstanton.github.io/pathogenx/reference/pathogenx/calculators/#pathogenx.calculators.PrevalenceCalculator).
 
 #### Quickstart
 To calculate prevalences from the 

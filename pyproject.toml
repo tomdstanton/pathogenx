@@ -4,7 +4,12 @@ name = "pathogenx"
 dynamic = ["urls", "version"]
 description = "A Python library for Pathogen Genotype eXploration"
 requires-python = ">=3.11"
-dependencies = ["pandas", "numpy", "scipy"]
+dependencies = [
+    "pandas",
+    "numpy",
+    "scipy",
+    "shinywidgets>=0.7.0",
+]
 
 [project.scripts]
 pathogenx = "pathogenx.cli:main"
@@ -18,7 +23,8 @@ app = [
     "geopandas",
     "shinyswatch",
     "plotly",
-    "faicons"
+    "faicons",
+    "shinywidgets"
 ]
 dev = ["pathogenx[test,docs,app]"]
 
