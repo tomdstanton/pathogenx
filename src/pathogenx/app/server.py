@@ -136,10 +136,10 @@ def main_server(input: Inputs, output: Outputs, session: Session):
             return
 
         for var in _VAR_CATEGORIES:
-            selected_col = input[f"{var}_variable"]()
+
             # Only proceed if a column has been selected from the dropdown.
             # This check handles both None and empty string ""
-            if selected_col:
+            if selected_col := input[f"{var}_variable"]():
                 col_data = d.data[selected_col]
                 if var == 'temporal':
                     min_, max_ = int(col_data.min()), int(col_data.max())

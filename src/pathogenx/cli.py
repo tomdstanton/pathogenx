@@ -16,6 +16,11 @@ _VERSION = RESOURCES.metadata.get('version', '0.0.0')
 
 # Functions ------------------------------------------------------------------------------------------------------------
 def prevalence_parser(subparsers):
+    """Sets up the argument parser for the 'prevalence' command.
+
+    Args:
+        subparsers: The subparsers object from `ArgumentParser.add_subparsers()`.
+    """
     name, desc = 'prevalence', 'Calculate prevalence in a dataset'
     parser = subparsers.add_parser(
         name, description=_LOGO, prog=f'{RESOURCES.package} {name}', formatter_class=RawTextHelpFormatter, help=desc,
@@ -55,6 +60,10 @@ def prevalence_parser(subparsers):
 
 # Main CLI Entry Point -------------------------------------------------------------------------------------------------
 def main():
+    """Main command-line interface entry point.
+
+    Parses command-line arguments and executes the appropriate command.
+    """
     parser = ArgumentParser(
         description=_LOGO, usage="{prog}s <command>", add_help=False, prog=RESOURCES.package,
         formatter_class=RawDescriptionHelpFormatter

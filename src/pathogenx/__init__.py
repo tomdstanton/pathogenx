@@ -1,77 +1,51 @@
 """
 Top-level module, including resource and optional dependency management.
 """
-from typing import Callable
+from typing import Callable, TYPE_CHECKING
 from warnings import warn
 from functools import wraps
 from importlib import import_module
 from pathlib import Path
 
+if TYPE_CHECKING:
+    from importlib.metadata import PackageMetadata
 
 # Classes --------------------------------------------------------------------------------------------------------------
 class Resources:
-    """
-    Holds global resources for this package which are generated on demand.
+    """Holds global resources for this package which are generated on demand.
+
+    This class provides a centralized way to access package-level information
+    like metadata and to check for the availability of optional dependencies.
+    Resources are loaded lazily upon first access.
 
     Attributes:
-        package: Name of the package
-        optional_packages: Set of optional packages to check for
+        package (str): The name of the package.
+        optional_packages (set[str]): A set of available optional packages.
     """
     def __init__(self, *optional_packages: str):
-        """
-        Parameters:
-            optional_packages: Optional packages to check for, e.g. 'numpy', 'pandas'
+        """Initializes the Resources object.
+
+        Args:
+            *optional_packages: A variable number of optional package names to
+                check for availability (e.g., 'numpy', 'pandas').
         """
         self.package: str = Path(__file__).parent.name
         self.optional_packages: set[str] = set(filter(self._check_module, optional_packages))
-        # self._data: 'Traversible' = None  # Generated on demand
         self._metadata: 'PackageMetadata' = None  # Generated on demand
-        # self._available_cpus: int = None  # Generated on demand
-        # self._rng: 'Random' = None  # Generated on demand
-        # self._pool: 'Executor' = None  # Generated on demand
 
-    # @property
-    # def data(self) -> 'Traversable':
-    #     """Path to the package data"""
-    #     if self._data is None:
-    #         from importlib.resources import files
-    #         self._data = files(self.package) / 'data'
-    #     return self._data
-    #
     @property
     def metadata(self) -> 'PackageMetadata':
-        """Package metadata"""
+        """Package metadata.
+
+        Lazily loads and returns the package's metadata (e.g., version).
+
+        Returns:
+            PackageMetadata: The metadata object for the package.
+        """
         if self._metadata is None:
             from importlib.metadata import metadata
             self._metadata = metadata(self.package)
         return self._metadata
-    #
-    # @property
-    # def rng(self) -> 'Random':
-    #     """A random number generator instance, can be reused"""
-    #     if self._rng is None:
-    #         from random import Random
-    #         self._rng = Random()
-    #     return self._rng
-    #
-    # @property
-    # def available_cpus(self) -> int:
-    #     """Number of available CPUs"""
-    #     if self._available_cpus is None:
-    #         try:
-    #             from os import process_cpu_count as cpu_count
-    #         except ImportError:
-    #             from os import cpu_count
-    #         self._available_cpus = cpu_count()
-    #     return self._available_cpus
-    #
-    # @property
-    # def pool(self) -> 'Executor':
-    #     """A concurrent.futures.Executor instance"""
-    #     if self._pool is None:
-    #         from concurrent.futures import ThreadPoolExecutor
-    #         self._pool = ThreadPoolExecutor(min(32, self.available_cpus + 4))
-    #     return self._pool
 
     @staticmethod
     def _check_module(module_name: str) -> bool:
@@ -92,11 +66,12 @@ class Resources:
 
 
 class PathogenxWarning(Warning):
-    """
-    A warning class for this package, making it easy to silence all our warning messages should you wish to.
-    Consult the `python.warnings` module documentation for more details.
+    """Base warning class for the pathogenx package.
+
+    This allows users to easily silence all warnings from this package.
 
     Examples:
+        To ignore all warnings from this package:
         >>> import warnings
         >>> from pathogenx import PathogenxWarning
         ... warnings.simplefilter('ignore', PathogenxWarning)
@@ -106,27 +81,31 @@ class PathogenxWarning(Warning):
 
 
 class DependencyWarning(PathogenxWarning):
-    """Custom warning class for missing optional dependencies."""
+    """Warning issued when an optional dependency is not found."""
     pass
 
 
 def require(*packages: str) -> Callable:
-    """
-    A decorator to check for required optional packages before executing a function.
+    """A decorator to verify optional dependencies before function execution.
+
+    If any of the specified packages are not installed, this decorator will
+    issue a `DependencyWarning` and prevent the decorated function from
+    running.
 
     Args:
-        *packages: Variable number of package names (strings) that are required.
+        *packages: The names of optional packages required by the function.
 
     Returns:
-        A decorator that wraps the function. If any required packages are missing,
-        it issues a DependencyWarning and returns None. Otherwise, it executes
-        the original function.
+        Callable: The wrapped function, which will only execute if all
+            dependencies are met.
 
     Examples:
         >>> from pathogenx import require
-        ... @require('numpy')
-        ... def some_numpy_func():
-        ... ...
+        ...
+        ... @require('numpy', 'pandas')
+        ... def process_data_with_numpy_and_pandas(data):
+        ...     # This code will only run if numpy and pandas are installed
+        ...     pass
     """
     def decorator(func: Callable) -> Callable:
         @wraps(func)

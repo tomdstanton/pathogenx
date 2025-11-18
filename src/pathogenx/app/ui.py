@@ -8,9 +8,9 @@ from shinyswatch import theme
 from pathogenx.app.utils import create_logo_link
 from pathogenx.io import _GENOTYPE_FLAVOURS, _META_FLAVOURS, _DIST_FLAVOURS
 
+# Constants ------------------------------------------------------------------------------------------------------------
 _FLAVOURS = {'genotype': get_args(_GENOTYPE_FLAVOURS), 'metadata': get_args(_META_FLAVOURS), 'distance': get_args(_DIST_FLAVOURS)}
 _VAR_CATEGORIES = ('genotype', 'adjustment', 'spatial', 'temporal', 'custom')
-
 
 # Define all hyperlinked images here -------------------------------------------
 kaptive_logo = create_logo_link("kaptive.png", "kaptive.readthedocs.io", "100px", 'Read the docs')
@@ -168,6 +168,9 @@ main_panel = ui.nav_panel(
 main_ui = ui.page_navbar(
     home,
     main_panel,
+    ui.nav_spacer(),
+    ui.nav_control(ui.a(icon("github"), href="https://github.com/tomdstanton/pathogenx", target="_blank")),
+    ui.nav_control(ui.a(icon("book"), href="tomdstanton.github.io/pathogenx/", target="_blank")),
     title='PathoGenX',
     footer=footer,
     theme=theme.lumen,
