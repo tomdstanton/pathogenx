@@ -7,8 +7,7 @@ watch: [mkdocs.yml, README.md, src]
 
 nav:
   - Home: index.md
-  - Reference:
-      - Web App: reference/app.md
+  - Web App: app.md
 
 theme:
   name: "material"
@@ -17,12 +16,12 @@ theme:
   homepage: https://tomdstanton.github.io/pathogenx
   palette:
     - scheme: default
-      primary: light green
+      primary: yellow
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - scheme: slate
-      primary: light green
+      primary: yellow
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
