@@ -78,7 +78,7 @@ def _setup_variables(i: str):
 def _setup_filters(i: str):
     id_, label = f'{i}_filter', f'Filter by {i} variable'
     if i == 'temporal':
-        return ui.input_slider(id_, label, min=1900, max=2050, value=(1900, 2050), step=1)
+        return ui.input_slider(id_, label, min=1900, max=2050, value=(1900, 2050), step=1, time_format="YYYY")
     return ui.input_selectize(id_, label, choices=[], multiple=True)
 
 # Data filters -----------------------------------------------------------------
@@ -99,7 +99,7 @@ sidebar = ui.sidebar(
     width=350,
     id="sidebar",
     open="closed",
-    # bg="white",
+    bg="white",
 )
 
 def _create_upload(ftype: str):
@@ -129,8 +129,11 @@ upload_panel = ui.accordion_panel(
 )
 prevalence_panel = ui.accordion_panel(
     ui.h4("Total prevalence"),
-    ui.input_selectize('heatmap_x', 'Select variable to plot heatmap', choices=[]),
-    ui.input_selectize('bars_x', 'Select variable to plot summary bars', choices=[]),
+    ui.row(
+        ui.input_selectize('heatmap_x', 'Select variable to plot heatmap', choices=[]),
+        ui.input_switch('heatmap_swap_denominator', 'Swap heatmap denominator'),
+        ui.input_selectize('bars_x', 'Select variable to plot summary bars', choices=[]),
+    ),
     output_widget('merged_plot', fill=True),
     value="prevalence_panel", icon=icon("earth-africa"), show=False
 )
@@ -138,7 +141,7 @@ coverage_panel = ui.accordion_panel(
     ui.h4("Spatial coverage"),
     ui.layout_column_wrap(
         ui.card(ui.card_body(output_widget("coverage_plot", fill=True), class_="p-0"), full_screen=True),
-        ui.card(ui.card_body(output_widget("map", fill=True), class_="p-0"), full_screen=True),
+        ui.card(ui.card_body(output_widget("map_plot", fill=True), class_="p-0"), full_screen=True),
         width=1 / 2,
         # height="400px",
     ),
@@ -169,8 +172,7 @@ main_panel = ui.nav_panel(
             "further filtering.</p>"
         ),
         ui.output_text("summary"),
-        ui.accordion(upload_panel, prevalence_panel, coverage_panel, dataframe_panel,
-                     id="accordion", multiple=True),
+        ui.accordion(upload_panel, id="accordion", multiple=True),
     ),
     icon=icon("laptop"),
 )

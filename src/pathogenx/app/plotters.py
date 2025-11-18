@@ -12,7 +12,6 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from pathogenx.calculators import PrevalenceResult
-from pathogenx.app.utils import nice_name as _nice_name, plural_name as _plural_name
 
 # Constants ------------------------------------------------------------------------------------------------------------
 _NE_COUNTRIES = Path(__file__).parent / "data" / "world-administrative-boundaries"
@@ -91,7 +90,6 @@ class PrevalencePlotter:
         """
         data = result.data
         y_col_name = result.stratified_by[-1]  # Plot by the finest stratification level
-        y_col_nice = _nice_name(y_col_name)
         # Set a sensible default sort order if none is provided
         y_order = self.y_order or data[y_col_name].unique().tolist()
         # Filter data to only include categories in y_order
@@ -111,7 +109,7 @@ class PrevalencePlotter:
             **self.theme,
             showlegend=False,
             barmode='relative',
-            yaxis=dict(title=y_col_nice, categoryorder='array', categoryarray=y_order, autorange="reversed"),
+            yaxis=dict(title=y_col_name, categoryorder='array', categoryarray=y_order, autorange="reversed"),
             xaxis1=dict(title='Raw Proportion', autorange="reversed", tickformat='.1f'),
         )
         if len(col_types) > 1:
@@ -168,13 +166,11 @@ class StrataPlotter:
         data = result.data
         # The first stratified column is always Y, the second is always X.
         y_col_name, x_col_name = result.stratified_by[0], result.stratified_by[1]
-        y_col_nice, x_col_nice = _nice_name(y_col_name), _nice_name(x_col_name)
-
         if y_col_name == result.denominator:  # denominator has not been swapped
-            numerator = x_col_nice
+            numerator = x_col_name
             denominator_swapped = False
         else:
-            numerator = y_col_nice
+            numerator = y_col_name
             denominator_swapped = True
         # Determine Y-axis order and filter data
         y_order = self.y_order or data[y_col_name].unique().tolist()
@@ -194,8 +190,8 @@ class StrataPlotter:
         plot_data = data.groupby([y_col_name, x_col_name])['prop.raw'].sum().reset_index()
         # Create hover text
         hover_text = (
-                f"<b>{y_col_nice}</b>: " + plot_data[y_col_name].astype(str) +
-                f"<br><b>{x_col_nice}</b>: " + plot_data[x_col_name].astype(str) +
+                f"<b>{y_col_name}</b>: " + plot_data[y_col_name].astype(str) +
+                f"<br><b>{x_col_name}</b>: " + plot_data[x_col_name].astype(str) +
                 f"<br><b>Prop</b>: " +
                 plot_data['prop.raw'].map('{:.3f}'.format)
         )
@@ -212,9 +208,9 @@ class StrataPlotter:
             )
         ).update_layout(
             **self.theme,
-            title=f'Proportion of<br>{_plural_name(numerator)} within {result.denominator}',
+            title=f'Proportion of<br>{numerator} within {result.denominator}',
             xaxis=dict(title=x_col_name, categoryorder='array', categoryarray=x_order),
-            yaxis=dict(title=y_col_nice, categoryorder='array', categoryarray=y_order, autorange="reversed"),
+            yaxis=dict(title=y_col_name, categoryorder='array', categoryarray=y_order, autorange="reversed"),
             # Set hover label background to match tile color
             hoverlabel=dict(
                 bgcolor="rgba(0,0,0,0)",  # Make the hover box background transparent
@@ -260,8 +256,6 @@ class SummaryBarPlotter:
         data = result.data
         y_col_name = result.stratified_by[0]
         x_col_name = f"# {self.fill_by}"
-        y_col_nice = _nice_name(y_col_name)
-        x_col_nice = _plural_name(x_col_name, niceify=True)
 
         # Set a sensible default sort order if none is provided, and filter data
         y_order = self.y_order or data[y_col_name].unique().tolist()
@@ -285,9 +279,9 @@ class SummaryBarPlotter:
         )).update_layout(
             **self.theme,
             showlegend=False,
-            xaxis_title=x_col_nice,
-            yaxis=dict(title=y_col_nice, categoryorder='array', categoryarray=y_order, autorange="reversed"),
-            title=f'Distinct {x_col_nice}<br>per {y_col_nice}'
+            xaxis_title=x_col_name,
+            yaxis=dict(title=y_col_name, categoryorder='array', categoryarray=y_order, autorange="reversed"),
+            title=f'Distinct {x_col_name}<br>per {y_col_name}'
         )
 
 
@@ -511,32 +505,73 @@ class MapPlotter:
 
 
 # Functions ------------------------------------------------------------------------------------------------------------
-def merge_prevalence_figs(prevalence: go.Figure = None, strata: go.Figure = None, summary_bar: go.Figure = None) -> go.Figure | None:
-    """Merges the 3/4 traces from these figures into a single figure"""
-    if prevalence is None:
+def merge_prevalence_figs(prevalence: go.Figure, strata: go.Figure = None, summary_bar: go.Figure = None) -> go.Figure | None:
+    """Merges traces from up to three figures into a single figure."""
+    plots = [prevalence]
+    if strata:
+        plots.append(strata)
+    if summary_bar:
+        plots.append(summary_bar)
+
+    traces = [trace for p in plots for trace in p.data]
+    if not traces:
         return None
-    # The number of traces from the prevalence plot determines if we have raw + adjusted data
+
     num_prevalence_plots = len(prevalence.data)
-    traces = (*prevalence.data, *strata.data, *summary_bar.data)
+
+    column_widths = []
+    if num_prevalence_plots == 1:
+        column_widths.extend([0.4])
+    elif num_prevalence_plots == 2:
+        column_widths.extend([0.2, 0.2])
+
+    if strata:
+        column_widths.append(0.4)
+    if summary_bar:
+        column_widths.append(0.2)
+
+    # Subplot titles for prevalence are in annotations. For others, in title.
+    subplot_titles = []
+    for ann in prevalence.layout.annotations:
+        subplot_titles.append(ann.text)
+    if strata:
+        subplot_titles.append(strata.layout.title.text)
+    if summary_bar:
+        subplot_titles.append(summary_bar.layout.title.text)
+
     fig = make_subplots(
         rows=1,
         cols=len(traces),
         shared_yaxes=True,
-        column_widths=[0.4, 0.4, 0.2] if num_prevalence_plots == 1 else [0.2, 0.2, 0.4, 0.2],
+        column_widths=column_widths if len(column_widths) == len(traces) else None,
         horizontal_spacing=0.01,
-        subplot_titles=[p.layout.title.text for p in (prevalence, strata, summary_bar) for _ in p.data]
+        subplot_titles=subplot_titles
     )
+
     for n, trace in enumerate(traces, start=1):
         fig.add_trace(trace, row=1, col=n)
+
     fig.update_layout(yaxis=prevalence.layout.yaxis)
-    if num_prevalence_plots == 2: # Raw + Adjusted
-        fig.update_xaxes(title=prevalence.layout.xaxis1.title, tickformat=prevalence.layout.xaxis1.tickformat, autorange=prevalence.layout.xaxis1.autorange, row=1, col=1)
-        fig.update_xaxes(title=prevalence.layout.xaxis2.title, tickformat=prevalence.layout.xaxis2.tickformat, row=1, col=2)
-        fig.update_xaxes(row=1, col=3, patch=strata.layout.xaxis1)
-        fig.update_xaxes(row=1, col=4, patch=summary_bar.layout.xaxis1)
-    else: # Raw only
-        fig.update_xaxes(title=prevalence.layout.xaxis.title, tickformat=prevalence.layout.xaxis.tickformat, autorange=prevalence.layout.xaxis.autorange, row=1, col=1)
-        fig.update_xaxes(row=1, col=2, patch=strata.layout.xaxis1)
-        fig.update_xaxes(row=1, col=3, patch=summary_bar.layout.xaxis1)
+
+    col_idx = 1
+    if num_prevalence_plots == 2:  # Raw + Adjusted
+        fig.update_xaxes(title=prevalence.layout.xaxis1.title, tickformat=prevalence.layout.xaxis1.tickformat,
+                         autorange=prevalence.layout.xaxis1.autorange, row=1, col=col_idx)
+        col_idx += 1
+        fig.update_xaxes(title=prevalence.layout.xaxis2.title, tickformat=prevalence.layout.xaxis2.tickformat,
+                         autorange=prevalence.layout.xaxis2.autorange, row=1, col=col_idx)
+        col_idx += 1
+    elif num_prevalence_plots == 1:  # Raw only
+        # The prevalence plotter has a bug where the title is on xaxis1 even for a single plot.
+        fig.update_xaxes(title=prevalence.layout.xaxis1.title, tickformat=prevalence.layout.xaxis1.tickformat,
+                         autorange=prevalence.layout.xaxis1.autorange, row=1, col=col_idx)
+        col_idx += 1
+
+    if strata:
+        fig.update_xaxes(patch=strata.layout.xaxis, row=1, col=col_idx)
+        col_idx += len(strata.data)
+
+    if summary_bar:
+        fig.update_xaxes(patch=summary_bar.layout.xaxis, row=1, col=col_idx)
 
     return fig.update_layout(**_THEME, showlegend=False)

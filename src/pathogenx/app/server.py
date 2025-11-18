@@ -11,7 +11,7 @@ from pathogenx.dataset import Dataset
 from pathogenx.calculators import PrevalenceCalculator, PrevalenceResult
 from pathogenx.app.plotters import (PrevalencePlotter, StrataPlotter, SummaryBarPlotter, CoveragePlotter, MapPlotter,
                                  merge_prevalence_figs)
-
+from .ui import prevalence_panel, coverage_panel, dataframe_panel
 _VAR_CATEGORIES = ('genotype', 'adjustment', 'spatial', 'temporal', 'custom')
 
 def main_server(input: Inputs, output: Outputs, session: Session):
@@ -75,7 +75,8 @@ def main_server(input: Inputs, output: Outputs, session: Session):
         dataset = Dataset(genotypes, _load_metadata(), _load_distances())
         if dataset.distances is not None:
             ui.notification_show('Calculating clusters...')
-            dataset.calculate_clusters(method=input.cluster_method(), distance=input.snp_distance())
+            clusters = dataset.calculate_clusters(method=input.cluster_method(), distance=input.snp_distance())
+            ui.notification_show(f'{clusters.nunique()} unique clusters', type="message")
         reactive_dataset.set(dataset)
 
     # User data to be filtered and used for prevalences ----------------------------
@@ -106,10 +107,12 @@ def main_server(input: Inputs, output: Outputs, session: Session):
         d: Dataset | None = reactive_dataset.get()
         if d is None or len(d) == 0:
             ui.update_sidebar("sidebar", show=False)  # Start with sidebar hidden
-            ui.update_accordion("upload_panel", show=True)  # Show the upload panel
+            ui.update_accordion_panel('accordion', "upload_panel", show=True)  # Show the upload panel
+            for i in (prevalence_panel, coverage_panel, dataframe_panel):
+                ui.remove_accordion_panel('accordion', i)
         else:
             ui.update_sidebar("sidebar", show=True)  # Show the sidebar
-            ui.update_accordion("upload_panel", show=False)  # Hide the upload panel
+            ui.update_accordion_panel('accordion', "upload_panel", show=False)  # Hide the upload panel
             metadata_cols = list(d.metadata_columns) if d.metadata_columns is not None else []
             genotype_cols = list(d.genotype_columns)
             all_cols = sorted(genotype_cols + metadata_cols)
@@ -119,6 +122,8 @@ def main_server(input: Inputs, output: Outputs, session: Session):
                 ui.update_selectize(f"{var}_variable", choices=[''] + cols)
             ui.update_selectize("heatmap_x", choices=[''] + all_cols)
             ui.update_selectize("bars_x", choices=[''] + all_cols)
+            for i in (prevalence_panel, coverage_panel, dataframe_panel):
+                ui.insert_accordion_panel('accordion', i)
 
     def _create_event_lambda(var_name: str):
         """Function factory to correctly capture the loop variable for the lambda."""
@@ -159,14 +164,12 @@ def main_server(input: Inputs, output: Outputs, session: Session):
     def summary():
         if (dataset := reactive_dataset.get()) is None or len(dataset) == 0:
             return ''
-        loaded = dataset.data
-        if (filtered := reactive_data()) is None or filtered.empty:
-            return f"Samples: 0/{len(loaded)}"
-        out = f"Samples: {len(filtered)}/{len(loaded)}"
-        for var in _VAR_CATEGORIES:
-            if i := input[var]():
-                out += f'; {filtered[i].nunique()}/{loaded[i].nunique()} unique {i} {var} variables'
-        return out
+        d = dataset.data
+        if (f := reactive_data()) is None or f.empty:
+            return f"Samples: 0/{len(d)}"
+        out = [f"Samples: {len(f)}/{len(d)}"]
+        out += [f'{f[i].nunique()}/{d[i].nunique()} unique {i} {v} variables' for v in _VAR_CATEGORIES if (i := input[v]())]
+        return '; '.join(out)
 
     @reactive.calc
     def prevalence() -> PrevalenceResult | None:
@@ -221,17 +224,9 @@ def main_server(input: Inputs, output: Outputs, session: Session):
         if (r1 := prevalence()) is None or len(r1) == 0:
             return None
         p1 = PrevalencePlotter().plot(r1)
-        return p1
-        # if (r2 := prevalence_stratified()) is None or len(r2) == 0:
-        #     p2 = None
-        # else:
-        #     p2 = StrataPlotter().plot(r2)
-        # if bars_x := input.bars_x():
-        #     p3 = SummaryBarPlotter(fill_by=bars_x).plot(r1)
-        # else:
-        #     p3 = None
-        # # Render plots
-        # return merge_prevalence_figs(p1, p2, p3)
+        p2 = StrataPlotter().plot(r2) if (r2 := prevalence_stratified()) else None
+        p3 = SummaryBarPlotter(fill_by=bars_x).plot(r1) if (bars_x := input.bars_x()) else None
+        return merge_prevalence_figs(p1, p2, p3)
 
     @output
     @render_plotly
@@ -239,12 +234,12 @@ def main_server(input: Inputs, output: Outputs, session: Session):
         if (r := prevalence_coverage()) is None or len(r) == 0:
             return None
         return CoveragePlotter().plot(r)
-#
-#     @output
-#     @render_plotly
-#     def map():
-#         """Renders the main combined plot (pyramid, heatmap, bars)."""
-#         if len(r := prevalence_coverage()) == 0:
-#             return None
-#         return  MapPlotter().plot(r)
-#
+
+    @output
+    @render_plotly
+    def map_plot():
+        """Renders the main combined plot (pyramid, heatmap, bars)."""
+        if (r := prevalence_coverage()) is None or len(r) == 0:
+            return None
+        return  MapPlotter().plot(r)
+
