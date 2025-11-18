@@ -511,8 +511,10 @@ class MapPlotter:
 
 
 # Functions ------------------------------------------------------------------------------------------------------------
-def merge_prevalence_figs(prevalence: go.Figure, strata: go.Figure, summary_bar: go.Figure) -> go.Figure:
+def merge_prevalence_figs(prevalence: go.Figure = None, strata: go.Figure = None, summary_bar: go.Figure = None) -> go.Figure | None:
     """Merges the 3/4 traces from these figures into a single figure"""
+    if prevalence is None:
+        return None
     # The number of traces from the prevalence plot determines if we have raw + adjusted data
     num_prevalence_plots = len(prevalence.data)
     traces = (*prevalence.data, *strata.data, *summary_bar.data)

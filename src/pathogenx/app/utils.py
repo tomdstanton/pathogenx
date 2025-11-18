@@ -104,6 +104,8 @@ def app_cli_parser(subparsers, package: str, description: str, formatter_class, 
     app.add_argument('--launch-browser', action='store_true',
                      help='Launch app browser after app starts, using the Python webbrowser module')
     app.add_argument('--dev-mode', action='store_true', help='Run in development mode')
+    app.add_argument('--factory', action='store_true', help='Treat app as an application factory\n'
+                                                            'i.e. a () -> <ASGI app> callable.')
 
     opts = parser.add_argument_group(bold('Other options'), '')
     opts.add_argument('-v', '--version', help='Show version number and exit', action='version', version=version)

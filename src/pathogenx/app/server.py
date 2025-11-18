@@ -5,7 +5,7 @@ import pandas as pd
 from scipy.sparse import coo_matrix
 from pathlib import Path
 from shiny import Inputs, Outputs, Session, reactive, render, ui
-from shinywidgets import render_widget
+from shinywidgets import render_plotly
 from pathogenx.io import GenotypeFile, MetaFile, DistFile
 from pathogenx.dataset import Dataset
 from pathogenx.calculators import PrevalenceCalculator, PrevalenceResult
@@ -92,7 +92,6 @@ def main_server(input: Inputs, output: Outputs, session: Session):
                     min_val, max_val = filter_values
                     filtered_data = filtered_data[filtered_data[variable_col].between(min_val, max_val)]
                 else:
-                    print(filter_values)
                     filtered_data = filtered_data[filtered_data[variable_col].isin(filter_values)]
 
         if filtered_data.empty:
@@ -106,11 +105,11 @@ def main_server(input: Inputs, output: Outputs, session: Session):
     def _toggle_panels_on_load():
         d: Dataset | None = reactive_dataset.get()
         if d is None or len(d) == 0:
-            ui.update_sidebar("sidebar", show=False)
-            ui.update_accordion("upload_panel", show=False)
+            ui.update_sidebar("sidebar", show=False)  # Start with sidebar hidden
+            ui.update_accordion("upload_panel", show=True)  # Show the upload panel
         else:
-            ui.update_sidebar("sidebar", show=True)
-            ui.update_accordion("upload_panel", show=True)
+            ui.update_sidebar("sidebar", show=True)  # Show the sidebar
+            ui.update_accordion("upload_panel", show=False)  # Hide the upload panel
             metadata_cols = list(d.metadata_columns) if d.metadata_columns is not None else []
             genotype_cols = list(d.genotype_columns)
             all_cols = sorted(genotype_cols + metadata_cols)
@@ -118,6 +117,8 @@ def main_server(input: Inputs, output: Outputs, session: Session):
             for var, cols in zip(_VAR_CATEGORIES, (genotype_cols, adjust_cols, metadata_cols, metadata_cols, all_cols)):
                 # Add a blank choice to allow the input to be unselected
                 ui.update_selectize(f"{var}_variable", choices=[''] + cols)
+            ui.update_selectize("heatmap_x", choices=[''] + all_cols)
+            ui.update_selectize("bars_x", choices=[''] + all_cols)
 
     def _create_event_lambda(var_name: str):
         """Function factory to correctly capture the loop variable for the lambda."""
@@ -134,9 +135,7 @@ def main_server(input: Inputs, output: Outputs, session: Session):
         """
         if (d := reactive_dataset.get()) is None or len(d) == 0:
             return
-
         for var in _VAR_CATEGORIES:
-
             # Only proceed if a column has been selected from the dropdown.
             # This check handles both None and empty string ""
             if selected_col := input[f"{var}_variable"]():
@@ -148,144 +147,104 @@ def main_server(input: Inputs, output: Outputs, session: Session):
                     choices = sorted(col_data.dropna().unique().tolist())
                     ui.update_selectize(f"{var}_filter", choices=choices, selected=[])
 
-    @output
-    @render.ui
-    def prevalence_panel_content():
-        if reactive_dataset.get() is not None:
-            return ui.output_plot("merged_plot")
-
-    @output
-    @render.ui
-    def coverage_panel_content():
-        if input.spatial_variable() and input.temporal_variable():
-            return ui.layout_column_wrap(
-                ui.card(ui.card_body(ui.output_plot("coverage_plot"), class_="p-0"), full_screen=True),
-                ui.card(ui.card_body(ui.output_ui("map"), class_="p-0"), full_screen=True),
-                width=1 / 2,
-                height="400px",
-            )
-
-    @output
-    @render.ui
-    def dataframe_panel_content():
-        if input.spatial_variable() and input.temporal_variable():
-            return ui.output_data_frame("dataframe")
-
-
     # Output dataframe -------------------------------------------------------------
     @render.data_frame
     def dataframe():
         if (df := reactive_data()) is None or df.empty:
             return None
-        return render.DataGrid(df.reset_index(drop=True))
-#
-#     # Output summary ---------------------------------------------------------------
-#     @render.text
-#     def summary():
-#         loaded = reactive_loaded_data()
-#         if loaded is None or loaded.empty:
-#             return ""
-#
-#         filtered = reactive_data()
-#         if filtered is None or filtered.empty:
-#             return f"Samples: 0/{len(loaded)}"
-#
-#         # This is a simplified version of your R summary string
-#         return (
-#             f"Samples: {len(filtered)}/{len(loaded)}; "
-#             f"Studies: {len(input.study_selector() or [])}/{len(loaded['Study'].unique())}; "
-#             f"Regions: {len(input.region_selector() or [])}/{len(loaded['Region'].unique())}; "
-#             f"Years: {input.year_selector()[0]}-{input.year_selector()[1]}; "
-#             f"Resistance: {input.amr_selector()}"
-#         )
+        return df
+
+    # Output summary ---------------------------------------------------------------
+    @render.text
+    def summary():
+        if (dataset := reactive_dataset.get()) is None or len(dataset) == 0:
+            return ''
+        loaded = dataset.data
+        if (filtered := reactive_data()) is None or filtered.empty:
+            return f"Samples: 0/{len(loaded)}"
+        out = f"Samples: {len(filtered)}/{len(loaded)}"
+        for var in _VAR_CATEGORIES:
+            if i := input[var]():
+                out += f'; {filtered[i].nunique()}/{loaded[i].nunique()} unique {i} {var} variables'
+        return out
 
     @reactive.calc
-    def reactive_prevalence() -> PrevalenceResult | None:
+    def prevalence() -> PrevalenceResult | None:
         """Calculates overall prevalence for the selected genotype."""
         if (dataset := reactive_dataset()) is None or len(dataset) == 0:
             return None
         if (data := reactive_data()) is None or len(data) == 0:
             return None
-        if (genotype := input.genotype_variable()) is None:
+        if not (genotype := input.genotype_variable()):
             return None
-        adjust_by = input.adjustment_variable()
-        return PrevalenceCalculator(
-            stratify_by=[genotype],
-            adjust_for=[adjust_by] if adjust_by else None,
-            n_distinct=list(dataset.genotype_columns - {genotype, input.heatmap_x()})
-        ).calculate(data)
+        adjust_for = input.adjustment_variable()
+        n_distinct = input.bars_x()
+        calc = PrevalenceCalculator(stratify_by=[genotype], adjust_for=[adjust_for] if adjust_for else None,
+                                    n_distinct=[n_distinct] if n_distinct else None)
+        result = calc.calculate(data)
+        return result
 
     @reactive.calc
-    def reactive_prevalence_stratified() -> PrevalenceResult | None:
+    def prevalence_stratified() -> PrevalenceResult | None:
         """Calculates prevalence stratified by a second variable for the heatmap."""
         if (data := reactive_data()) is None or len(data) == 0:
             return None
         if (genotype := input.genotype_variable()) is None:
             return None
+        if not (heatmap_x := input.heatmap_x()):
+            return None
         adjust_by = input.adjustment_variable()
-        return PrevalenceCalculator(
-            stratify_by=[input.genotype_variable(), input.heatmap_x()],
-            adjust_for=[adjust_by] if adjust_by else None,
-            denominator=(genotype if input.heatmap_swap_denominator() else input.heatmap_x())
-        ).calculate(data)
+        calc = PrevalenceCalculator(stratify_by=[genotype, heatmap_x], adjust_for=[adjust_by] if adjust_by else None,
+                                    denominator=(genotype if input.heatmap_swap_denominator() else heatmap_x))
+        result = calc.calculate(data)
+        return result
 
     @reactive.calc
-    def reactive_prevalence_coverage() -> PrevalenceResult | None:
+    def prevalence_coverage() -> PrevalenceResult | None:
         """Calculates prevalence stratified by a second variable for the heatmap."""
         if (data := reactive_data()) is None or len(data) == 0:
             return None
-        if (genotype := input.genotype_variable()) is None:
+        if not (genotype := input.genotype_variable()):
             return None
-        if (spatial := input.spatial_variable()) is None:
+        if not (spatial := input.spatial_variable()):
             return None
         adjust_by = input.adjustment_variable()
-        return PrevalenceCalculator(
-            stratify_by=[spatial, genotype],
-            adjust_for=[adjust_by] if adjust_by else None
-        ).calculate(data)
+        calc = PrevalenceCalculator(stratify_by=[spatial, genotype],adjust_for=[adjust_by] if adjust_by else None)
+        result = calc.calculate(data)
+        return result
 
     @output
-    @render_widget
+    @render_plotly
     def merged_plot():
         """Renders the main combined plot (pyramid, heatmap, bars)."""
         # Get reactive variables
-        if (r1 := reactive_prevalence()) is None or len(r1) == 0:
+        if (r1 := prevalence()) is None or len(r1) == 0:
             return None
-        if (r2 := reactive_prevalence_stratified()) is None or len(r2) == 0:
-            return None
-        # Init plotters
-        p1 = PrevalencePlotter()
-        p2 = StrataPlotter(max_x=input.heatmap_num_x())
-        p3 = SummaryBarPlotter(fill_by=input.bars_x())
-        # Render plots
-        return merge_prevalence_figs(p1.plot(r1), p2.plot(r2), p3.plot(r1))
+        p1 = PrevalencePlotter().plot(r1)
+        return p1
+        # if (r2 := prevalence_stratified()) is None or len(r2) == 0:
+        #     p2 = None
+        # else:
+        #     p2 = StrataPlotter().plot(r2)
+        # if bars_x := input.bars_x():
+        #     p3 = SummaryBarPlotter(fill_by=bars_x).plot(r1)
+        # else:
+        #     p3 = None
+        # # Render plots
+        # return merge_prevalence_figs(p1, p2, p3)
 
-#     @output
-#     @render_widget
-#     def coverage_plot():
-#         """Renders the main combined plot (pyramid, heatmap, bars)."""
-#         if len(r := reactive_prevalence_coverage()) == 0 or not (x_order := genotype_list()):
-#             return None
-#         return CoveragePlotter(x_order=x_order).plot(r)
+    @output
+    @render_plotly
+    def coverage_plot():
+        if (r := prevalence_coverage()) is None or len(r) == 0:
+            return None
+        return CoveragePlotter().plot(r)
 #
 #     @output
-#     @render_widget
+#     @render_plotly
 #     def map():
 #         """Renders the main combined plot (pyramid, heatmap, bars)."""
-#         if len(r := reactive_prevalence_coverage()) == 0:
+#         if len(r := prevalence_coverage()) == 0:
 #             return None
 #         return  MapPlotter().plot(r)
 #
-#     @output
-#     @render.text
-#     def summary():
-#         """
-#         Returns a summary of the filtered data
-#         """
-#         return (f"Samples: {len(reactive_data())}/{len(DATA)}; "
-#             f"Studies: {len(input.study_selector())}/{len(DATA['Study'].unique())}; "
-#             f"Regions: {len(input.region_selector())}/{len(DATA['Region'].unique())}; "
-#             f"Years: {input.year_selector()[1] - input.year_selector()[0] + 1}/"
-#             f"{DATA['Year'].max() - DATA['Year'].min() + 1}; "
-#             f"Resistance: {input.amr_selector()}; "
-#             f"Outcome: {input.outcome_selector()}")

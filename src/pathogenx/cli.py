@@ -104,5 +104,6 @@ def main():
         from shiny import run_app
         run_app(
             "pathogenx.app:app", host=args.host, port=args.port, autoreload_port=args.autoreload_port,
-            reload=args.reload, ws_max_size=args.ws_max_size, launch_browser=args.launch_browser, dev_mode=args.dev_mode
+            reload=args.reload, ws_max_size=args.ws_max_size, launch_browser=args.launch_browser,
+            dev_mode=args.dev_mode, factory=args.factory
         )

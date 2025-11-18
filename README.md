@@ -32,7 +32,7 @@ will eventually force complicity with the
 - Genotyping data - a `pandas` dataframe containing the parsed output of a genotyping tool. 
 - Optional metadata - joined to genotyping results upon initialisation, possibly containing spatio-temporal data.
 - Optional distances - Represented as a `scipy.sparse` matrix of pairwise distances, parsed from the outputs of tools 
-- such as `mash`.
+such as `mash`.
 
 We also define `Calculator`s, which calculate informative information from genotyping data, such as prevalence and 
 diversity.
@@ -104,10 +104,11 @@ Other options:
 
 ## Web-app
 The PathoGenX app provides a web-based GUI for the exploration of pathogen genotyping data. It is an optional module
-that can be installed like so:
+that can be installed and run with the following command:
 
 ```shell
 pip install pathogenx[app]
+pathogenx app
 ```
 
-Read more about the app [here](src/pathogenx/app/README.md)
+Read more about the app [here](src/pathogenx/app/README.md).

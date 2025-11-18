@@ -1,3 +1,6 @@
+"""
+Module to read and parse genotype, metadata and distance data from different sources
+"""
 from pathlib import Path
 from typing import Union, Literal
 from abc import ABC, abstractmethod
