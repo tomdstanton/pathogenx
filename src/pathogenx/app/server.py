@@ -11,7 +11,6 @@ from pathogenx.dataset import Dataset
 from pathogenx.calculators import PrevalenceCalculator, PrevalenceResult
 from pathogenx.app.plotters import (PrevalencePlotter, StrataPlotter, SummaryBarPlotter, CoveragePlotter, MapPlotter,
                                  merge_prevalence_figs)
-from pathogenx.app.ui import prevalence_panel, coverage_panel, dataframe_panel
 
 _VAR_CATEGORIES = ('genotype', 'adjustment', 'spatial', 'temporal', 'custom')
 
@@ -41,7 +40,9 @@ def main_server(input: Inputs, output: Outputs, session: Session):
         f = file_infos[0]
         metadata_file = MetaFile.from_flavour(Path(f["datapath"]), input.metadata_flavour())
         try:
-            return metadata_file.load()
+            data = metadata_file.load()
+            ui.notification_show('Successfully loaded metadata file', type='message')
+            return data
         except Exception as e:
             ui.notification_show(f"Error loading metadata file: {e}", type="error", duration=None)
             return None
@@ -53,7 +54,9 @@ def main_server(input: Inputs, output: Outputs, session: Session):
         f = file_infos[0]
         distance_file = DistFile.from_flavour(Path(f["datapath"]), input.distance_flavour())
         try:
-            return distance_file.load()
+            data = distance_file.load()
+            ui.notification_show('Successfully loaded distance file', type='message')
+            return data
         except Exception as e:
             ui.notification_show(f"Error loading distance file: {e}", type="error", duration=None)
             return None
@@ -81,17 +84,15 @@ def main_server(input: Inputs, output: Outputs, session: Session):
         if (d := reactive_dataset.get()) is None or len(d) == 0:
             return None
 
-        filtered_data = d.data
+        filtered_data = d.data  # This creates a copy via the Dataset.data attribute method
 
         for var in _VAR_CATEGORIES:
-            variable_col = input[f"{var}_variable"]()
-            filter_values = input[f"{var}_filter"]()
-
-            if variable_col and filter_values:
+            if (variable_col := input[f"{var}_variable"]()) and (filter_values := input[f"{var}_filter"]()):
                 if var == 'temporal':
                     min_val, max_val = filter_values
                     filtered_data = filtered_data[filtered_data[variable_col].between(min_val, max_val)]
                 else:
+                    print(filter_values)
                     filtered_data = filtered_data[filtered_data[variable_col].isin(filter_values)]
 
         if filtered_data.empty:
@@ -104,10 +105,6 @@ def main_server(input: Inputs, output: Outputs, session: Session):
     @reactive.event(reactive_dataset)
     def _toggle_panels_on_load():
         d: Dataset | None = reactive_dataset.get()
-        # Always remove panels on new data load to reset the UI state
-        ui.remove_ui(selector="#prevalence_panel", immediate=True)
-        ui.remove_ui(selector="#coverage_panel", immediate=True)
-        ui.remove_ui(selector="#dataframe_panel", immediate=True)
         if d is None or len(d) == 0:
             ui.update_sidebar("sidebar", show=False)
             ui.update_accordion("upload_panel", show=False)
@@ -121,12 +118,6 @@ def main_server(input: Inputs, output: Outputs, session: Session):
             for var, cols in zip(_VAR_CATEGORIES, (genotype_cols, adjust_cols, metadata_cols, metadata_cols, all_cols)):
                 # Add a blank choice to allow the input to be unselected
                 ui.update_selectize(f"{var}_variable", choices=[''] + cols)
-            
-            # Insert the primary prevalence panel immediately after data load
-            ui.insert_ui(
-                selector="#accordion", where="beforeEnd",
-                ui=prevalence_panel
-            )
 
     def _create_event_lambda(var_name: str):
         """Function factory to correctly capture the loop variable for the lambda."""
@@ -155,24 +146,30 @@ def main_server(input: Inputs, output: Outputs, session: Session):
                     ui.update_slider(f"{var}_filter", min=min_, max=max_, value=(min_, max_))
                 else:
                     choices = sorted(col_data.dropna().unique().tolist())
-                    ui.update_selectize(f"{var}_filter", choices=choices, selected=choices)
+                    ui.update_selectize(f"{var}_filter", choices=choices, selected=[])
 
-    @reactive.effect
-    @reactive.event(input.spatial_variable, input.temporal_variable)
-    def _toggle_coverage_panels():
-        """
-        Inserts or removes the coverage and dataframe panels based on whether
-        valid spatial and temporal variables have been selected by the user.
-        """
-        # Remove the panels first to handle deselection
-        ui.remove_ui(selector="#coverage_panel", immediate=True)
-        ui.remove_ui(selector="#dataframe_panel", immediate=True)
+    @output
+    @render.ui
+    def prevalence_panel_content():
+        if reactive_dataset.get() is not None:
+            return ui.output_plot("merged_plot")
 
-        # Check if both spatial and temporal variables are selected (not None or '')
+    @output
+    @render.ui
+    def coverage_panel_content():
         if input.spatial_variable() and input.temporal_variable():
-            ui.notification_show("Spatial and temporal variables selected, coverage panels unlocked.", type="message")
-            ui.insert_ui(selector="#accordion", where="beforeEnd", ui=coverage_panel)
-            ui.insert_ui(selector="#accordion", where="beforeEnd", ui=dataframe_panel)
+            return ui.layout_column_wrap(
+                ui.card(ui.card_body(ui.output_plot("coverage_plot"), class_="p-0"), full_screen=True),
+                ui.card(ui.card_body(ui.output_ui("map"), class_="p-0"), full_screen=True),
+                width=1 / 2,
+                height="400px",
+            )
+
+    @output
+    @render.ui
+    def dataframe_panel_content():
+        if input.spatial_variable() and input.temporal_variable():
+            return ui.output_data_frame("dataframe")
 
 
     # Output dataframe -------------------------------------------------------------

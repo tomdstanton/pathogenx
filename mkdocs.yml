@@ -7,6 +7,8 @@ watch: [mkdocs.yml, README.md, src]
 
 nav:
   - Home: index.md
+  - Reference:
+      - Web App: reference/app.md
 
 theme:
   name: "material"
@@ -30,10 +32,6 @@ theme:
 
 markdown_extensions:
   - admonition
-#  - attr_list
-#  - pymdownx.emoji:
-#      emoji_index: !!python/name:material.extensions.emoji.twemoji
-#      emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
 plugins:
   - search
@@ -47,3 +45,4 @@ plugins:
   - api-autonav:
       modules: ['src/pathogenx']
       nav_section_title: "API Reference"
+  - include-markdown

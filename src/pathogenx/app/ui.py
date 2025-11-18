@@ -78,8 +78,7 @@ def _setup_filters(i: str):
     id_, label = f'{i}_filter', f'Filter by {i}'
     if i == 'temporal':
         return ui.input_slider(id_, label, min=1900, max=2050, value=(1900, 2050), step=1)
-    return ui.input_selectize(id_, f'Filter by {i} variable', choices=[],
-                              multiple=i != 'genotype')
+    return ui.input_selectize(id_, f'Filter by {i} variable', choices=[], multiple=True)
 
 # Data filters -----------------------------------------------------------------
 sidebar = ui.sidebar(
@@ -112,55 +111,32 @@ def _create_flavours(i: tuple[str, list[str]]):
     return ui.input_select(f"{ftype}_flavour", f"{ftype[0].upper()}{ftype[1:]} file flavour", choices=flav,
                            selected=flav[0])
 
-upload_panel = ui.accordion_panel(
-    ui.h4("Upload files"),
-    ui.row(
-        ui.column(4, *map(_create_upload, _FLAVOURS.keys())),
-        ui.column(4, *map(_create_flavours, _FLAVOURS.items())),
-        ui.column(
-            4,
-            ui.input_slider("snp_distance", "SNP distance for clustering", min=0, max=100, value=20, step=1),
-            ui.input_select("cluster_method", "Select clustering method", choices=['connected_components']),
-            ui.input_action_button('load_data', 'Load data', class_='btn-primary', width='300px'),
-            ui.hr(),
-            ui.input_action_button('upload_reset', 'Reset uploads', class_='btn-danger', width='300px'),
-        )
-    ),
-    value="upload_panel",
-    icon=icon("upload"),
-)
+def _create_sub_panel(title, value=None, icon_=None, content: list=None):
+    stem = title.split()[0].lower()
+    value = value or f'{stem}_panel'
+    content = content or [ui.output_ui(f"{value}_content")]
+    return ui.accordion_panel(ui.h4(title), *content, value=value, icon=icon(icon_ or stem))
 
-# Panels to be inserted dynamically
-prevalence_panel = ui.accordion_panel(
-    ui.h4("Total prevalence"),
-    ui.output_plot("merged_plot"),
-    value="prevalence_panel",
-    icon=icon("earth-africa"),
+upload_panel = _create_sub_panel(
+    "Upload files", content=[
+        ui.row(
+            ui.column(4, *map(_create_upload, _FLAVOURS.keys())),
+            ui.column(4, *map(_create_flavours, _FLAVOURS.items())),
+            ui.column(
+                4,
+                ui.input_slider("snp_distance", "SNP distance for clustering", min=0, max=100, value=20, step=1),
+                ui.input_select("cluster_method", "Select clustering method", choices=['connected_components']),
+                ui.input_action_button('load_data', 'Load data', class_='btn-primary', width='300px'),
+                ui.hr(),
+                ui.input_action_button('upload_reset', 'Reset uploads', class_='btn-danger', width='300px'),
+            )
+        ),
+    ]
 )
-
-coverage_panel = ui.accordion_panel(
-    ui.h4("Spatial coverage"),
-    ui.layout_column_wrap(
-        ui.card(ui.card_body(ui.output_plot("coverage_plot"), class_="p-0"), full_screen=True),
-        ui.card(ui.card_body(ui.output_ui("map"), class_="p-0"), full_screen=True),
-        width=1 / 2,
-        height="400px",
-    ),
-    value="coverage_panel",
-    icon=icon("map")
-)
-
-dataframe_panel = ui.accordion_panel(
-    ui.h4("Table"),
-    ui.output_data_frame("dataframe"),
-    value="dataframe_panel",
-    icon=icon("table"),
-)
-
 
 # Main panel -------------------------------------------------------------------
 main_panel = ui.nav_panel(
-    "Analyse your own data",
+    "Explore genotype prevalence and coverage",
     ui.layout_sidebar(
         sidebar,
         ui.HTML(
@@ -177,7 +153,13 @@ main_panel = ui.nav_panel(
             "further filtering.</p>"
         ),
         # ui.output_text("summary"),
-        ui.accordion(upload_panel, id="accordion", multiple=False, open=True),
+        ui.accordion(
+            upload_panel,
+            _create_sub_panel("Total prevalence", "prevalence_panel", "earth-africa"),
+            _create_sub_panel("Spatial coverage", "coverage_panel", "map"),
+            _create_sub_panel("Table", "dataframe_panel", "table"),
+            id="accordion", multiple=True, open=True
+        ),
     ),
     icon=icon("laptop"),
 )

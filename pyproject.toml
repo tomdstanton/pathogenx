@@ -9,6 +9,7 @@ dependencies = [
     "numpy",
     "scipy",
     "shinywidgets>=0.7.0",
+    "mkdocs-include-markdown-plugin>=7.2.0",
 ]
 
 [project.scripts]
@@ -17,7 +18,7 @@ pathogenx = "pathogenx.cli:main"
 [project.optional-dependencies]
 test = ["pytest"]
 #models = ["numpyro"]
-docs = ["mkdocs-material", "mkdocs-api-autonav>=0.3.0,<0.4"]
+docs = ["mkdocs-material", "mkdocs-api-autonav>=0.3.0,<0.4", "mkdocs-include-markdown-plugin"]
 app = [
     "shiny",
     "geopandas",
